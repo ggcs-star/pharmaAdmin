@@ -46,6 +46,7 @@ Route::post('/payment/create', [PaymentController::class, 'create']);
 Route::post('/orders/place', [OrderController::class, 'place']);
 Route::post('/orders/place', [OrderController::class, 'place'])->name('orders.place');
 Route::post('/orders/cancel/{id}', [OrderController::class, 'cancel'])->name('orders.cancel');
+
 // Checkout Route
 Route::get('/addresses', function () {
     if (!session('user_token')) {

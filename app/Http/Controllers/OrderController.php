@@ -77,13 +77,15 @@ public function show($id)
             ];
 
             // ✅ ITEMS
-            if (!empty($order['items'])) {
-                foreach ($order['items'] as &$item) {
-                    $item['product'] = [
-                        'name' => $item['product']['name'] ?? 'Item #' . ($item['item_id'] ?? '')
-                    ];
-                }
-            }
+          if (!empty($order['items'])) {
+    foreach ($order['items'] as &$item) {
+
+        $item['product'] = [
+            'name' => $item['product']['name'] ?? 'Item #' . ($item['item_id'] ?? ''),
+            'main_image' => $item['product']['main_image'] ?? null
+        ];
+    }
+}
 
             return view('orders', compact('order'));
         }

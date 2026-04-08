@@ -96,8 +96,24 @@ public function __construct()
 
             if ($response->successful()) {
                 $this->refreshCartCount();
-                return redirect()->back()->with('success', 'Added to cart');
-            }
+if ($response->successful()) {
+
+    // 🔥 latest cart count fetch
+    $cartResponse = Http::withToken(session('user_token'))
+        ->get($this->apiBaseUrl . '/cart');
+
+    $count = 0;
+
+    if ($cartResponse->successful()) {
+        $data = $cartResponse->json();
+        $count = collect($data['items'] ?? [])->sum('qty');
+    }
+
+    return response()->json([
+        'success' => true,
+        'cart_count' => $count
+    ]);
+}            }
 
             return redirect()->back()->with('error', 'Failed to add');
 
