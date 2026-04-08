@@ -232,54 +232,52 @@ document.getElementById('pay-btn')?.addEventListener('click', function () {
         }
 
         // STEP 2: Open Razorpay
-        var options = {
-            key: data.key,
-            amount: data.amount,
-            order_id: data.order_id,
+      var options = {
+    key: data.key,
+    amount: data.amount,
+    order_id: data.order_id,
 
-            name: "Pharma ERP",
-            description: "Order Payment",
+    name: "Pharma ERP",
+    description: "Order Payment",
 
-            handler: function (response) {
+    handler: function (response) {
 
-                // STEP 3: PLACE ORDER AFTER SUCCESS
-                fetch('/orders/place', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRF-TOKEN': csrf
-                    },
-                    body: JSON.stringify({
-                        address_id: addressId,
-                        payment_id: response.razorpay_payment_id,
-                        payment_mode: 'razorpay' // 🔥 FIXED
-                    })
-                })
-                .then(res => res.json())
-                .then(data => {
+        let formData = new FormData();
+        formData.append('address_id', addressId);
+        formData.append('payment_id', response.razorpay_payment_id);
+        formData.append('payment_mode', 'razorpay');
 
-                    if (data.status) {
-                        alert("✅ Order placed successfully");
-                        window.location.href = "/orders";
-                    } else {
-                        alert("❌ Order failed: " + data.message);
-                    }
-
-                })
-                .catch(err => {
-                    console.error(err);
-                    alert("Server error while placing order");
-                });
-
+        fetch('/orders/place', {
+            method: 'POST',
+            headers: {
+                'X-CSRF-TOKEN': csrf
             },
+            body: formData
+        })
+        .then(res => res.json())
+        .then(data => {
 
-            modal: {
-                ondismiss: function () {
-                    alert("⚠️ Payment cancelled");
-                }
+            if (data.status) {
+                alert("✅ Order placed successfully");
+                window.location.href = "/orders";
+            } else {
+                alert("❌ Order failed: " + data.message);
             }
-        };
 
+        })
+        .catch(err => {
+            console.error(err);
+            alert("Server error while placing order");
+        });
+
+    }, // 🔥 handler END here
+
+    modal: {
+        ondismiss: function () {
+            alert("⚠️ Payment cancelled");
+        }
+    }
+};
         var rzp = new Razorpay(options);
         rzp.open();
 

@@ -259,12 +259,12 @@
             </div>
             
             <div class="col-lg-6 text-center hero-image">
-                <div class="floating-element">
-                    <img src="https://placehold.co/500x450/ffffff/0d9488?text=Healthcare+Services" 
-                         alt="Healthcare Services" 
-                         class="img-fluid rounded-4 shadow-xxl" 
-                         style="border-radius: 30px; box-shadow: 0 30px 40px -20px rgba(0,0,0,0.3);">
-                </div>
+               <div class="floating-element">
+    <img src="{{ asset('images/healthcare.png') }}" 
+         alt="Healthcare Services" 
+         class="img-fluid rounded-4 shadow-xxl" 
+         style="border-radius: 30px; box-shadow: 0 30px 40px -20px rgba(0,0,0,0.3);">
+</div>
             </div>
         </div>
     </div>

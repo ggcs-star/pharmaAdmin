@@ -7,11 +7,16 @@ use Illuminate\Support\Facades\Log;
 
 class AuthController extends BaseController
 {
-    public function showLogin()
+    /* ===============================
+        SINGLE AUTH PAGE
+    =============================== */
+    public function index()
     {
-        return view('login');
-    }
+return view('login');    }
 
+    /* ===============================
+        LOGIN
+    =============================== */
     public function login(Request $request)
     {
         $request->validate([
@@ -19,17 +24,15 @@ class AuthController extends BaseController
             'password' => 'required|min:6'
         ]);
 
-        Log::info('Login attempt', ['email' => $request->email]);
+        Log::info('Login Attempt', ['email' => $request->email]);
 
         try {
-
-            // ✅ API CALL (clean)
             $response = $this->apiPost('/user/login', [
                 'email' => $request->email,
                 'password' => $request->password
             ]);
 
-            Log::info('API Response', [
+            Log::info('Login API Response', [
                 'status' => $response->status(),
                 'body' => $response->body()
             ]);
@@ -38,16 +41,19 @@ class AuthController extends BaseController
 
                 $data = $response->json();
 
-                if (isset($data['token'])) {
+                if (!isset($data['token'])) {
+                    return back()->with('error', 'Invalid login response');
+                }
 
-                    // ✅ session store
-                    session([
-                        'user_token' => $data['token'],
-                        'user_email' => $request->email,
-                        'user_name' => $data['name'] ?? $request->email
-                    ]);
+                // ✅ Session store
+                session([
+                    'user_token' => $data['token'],
+                    'user_email' => $data['user']['email'] ?? '',
+                    'user_name'  => $data['user']['name'] ?? ''
+                ]);
 
-                    // ✅ cart count fetch
+                // ✅ Cart fetch (optional but recommended)
+                try {
                     $cartResponse = $this->apiGet('/cart');
 
                     if ($cartResponse->successful()) {
@@ -56,47 +62,46 @@ class AuthController extends BaseController
                     } else {
                         session(['cart_count' => 0]);
                     }
-
-                    return redirect()->route('home')->with('success', 'Login successful!');
+                } catch (\Exception $e) {
+                    session(['cart_count' => 0]);
                 }
 
-                Log::error('Token missing', ['response' => $data]);
-
-                return back()->with('error', 'Invalid response')->withInput();
-
-            } else {
-
-                if ($response->status() == 401) {
-                    return back()->with('error', 'Invalid email or password')->withInput();
-                }
-
-                if ($response->status() == 422) {
-                    $errors = $response->json();
-                    return back()->with('error', 'Validation failed')->withInput();
-                }
-
-                return back()->with('error', 'Login failed')->withInput();
+                return redirect()->route('home')->with('success', 'Login successful');
             }
+
+            $data = $response->json();
+
+            if ($response->status() == 401) {
+                return back()->with('error', $data['message'] ?? 'Invalid credentials');
+            }
+
+            if ($response->status() == 403) {
+                return back()->with([
+                    'error' => $data['message'] ?? 'Email not verified',
+                    'show_otp' => true,
+                    'email' => $request->email
+                ]);
+            }
+
+            if ($response->status() == 404) {
+                return back()->with('error', $data['message'] ?? 'User not found');
+            }
+
+            return back()->with('error', $data['message'] ?? 'Login failed');
 
         } catch (\Exception $e) {
 
-            Log::error('Login exception', ['message' => $e->getMessage()]);
+            Log::error('Login Exception', [
+                'message' => $e->getMessage()
+            ]);
 
-            return back()->with('error', 'Server not responding')->withInput();
+            return back()->with('error', 'Server error, try again');
         }
     }
 
-    public function logout()
-    {
-        session()->forget(['user_token', 'user_email', 'user_name', 'cart_count']);
-        return redirect()->route('home')->with('success', 'Logged out');
-    }
-
-    public function showRegister()
-    {
-        return view('register');
-    }
-
+    /* ===============================
+        REGISTER (SEND OTP)
+    =============================== */
     public function register(Request $request)
     {
         $request->validate([
@@ -106,23 +111,122 @@ class AuthController extends BaseController
         ]);
 
         try {
-
-            // ✅ API CALL
             $response = $this->apiPost('/user/register', [
                 'name' => $request->name,
                 'email' => $request->email,
-                'password' => $request->password
+                'password' => $request->password,
+                'password_confirmation' => $request->password_confirmation
+            ]);
+
+            Log::info('Register API Response', [
+                'status' => $response->status(),
+                'body' => $response->body()
             ]);
 
             if ($response->successful()) {
-                return redirect()->route('login')->with('success', 'Registration successful!');
+                return back()->with([
+                    'success' => 'OTP sent to your email',
+                    'show_otp' => true,
+                    'email' => $request->email
+                ]);
             }
 
-            return back()->with('error', 'Registration failed')->withInput();
+            $data = $response->json();
+
+            return back()->with('error', $data['message'] ?? 'Registration failed');
 
         } catch (\Exception $e) {
 
-            return back()->with('error', 'Service unavailable')->withInput();
+            Log::error('Register Exception', [
+                'message' => $e->getMessage()
+            ]);
+
+            return back()->with('error', 'Server error, try again');
         }
+    }
+
+    /* ===============================
+        VERIFY OTP
+    =============================== */
+    public function verifyOtp(Request $request)
+    {
+        $request->validate([
+            'email' => 'required|email',
+            'otp' => 'required'
+        ]);
+
+        try {
+            $response = $this->apiPost('/user/verify-email-otp', [
+                'email' => $request->email,
+                'otp' => $request->otp
+            ]);
+
+            if ($response->successful()) {
+                return back()->with('success', 'Email verified! Now login');
+            }
+
+            $data = $response->json();
+
+            return back()->with([
+                'error' => $data['message'] ?? 'Invalid OTP',
+                'show_otp' => true,
+                'email' => $request->email
+            ]);
+
+        } catch (\Exception $e) {
+            return back()->with('error', 'OTP verification failed');
+        }
+    }
+
+    /* ===============================
+        RESEND OTP
+    =============================== */
+    public function resendOtp(Request $request)
+    {
+        $request->validate([
+            'email' => 'required|email'
+        ]);
+
+        try {
+            $this->apiPost('/user/resend-email-otp', [
+                'email' => $request->email
+            ]);
+
+            return back()->with([
+                'success' => 'OTP resent successfully',
+                'show_otp' => true,
+                'email' => $request->email
+            ]);
+
+        } catch (\Exception $e) {
+            return back()->with('error', 'Failed to resend OTP');
+        }
+    }
+    public function forgotPassword(Request $request)
+{
+    $response = $this->apiPost('/user/forgot-password', [
+        'email' => $request->email
+    ]);
+
+    if ($response->successful()) {
+        return back()->with('success', 'Reset link sent');
+    }
+
+    return back()->with('error', 'Failed to send reset link');
+}
+
+    /* ===============================
+        LOGOUT
+    =============================== */
+    public function logout()
+    {
+        session()->forget([
+            'user_token',
+            'user_email',
+            'user_name',
+            'cart_count'
+        ]);
+
+        return redirect()->route('home')->with('success', 'Logged out successfully');
     }
 }

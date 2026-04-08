@@ -20,12 +20,18 @@ Route::get('/', [HomeController::class, 'index'])->name('home');
 Route::get('/product/{id}', [ProductController::class, 'show'])->name('product.show');
 
 // Auth Routes
-Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
-Route::post('/login', [AuthController::class, 'login'])->name('login.submit');
-Route::get('/register', [AuthController::class, 'showRegister'])->name('register');
-Route::post('/register', [AuthController::class, 'register'])->name('register.submit');
-Route::get('/logout', [AuthController::class, 'logout'])->name('logout');
+Route::get('/login', [AuthController::class, 'index'])->name('login');
 
+Route::post('/login', [AuthController::class, 'login'])->name('login.submit');
+
+Route::post('/register', [AuthController::class, 'register'])->name('register.submit');
+
+Route::post('/verify-otp', [AuthController::class, 'verifyOtp'])->name('verify.otp');
+Route::post('/forgot-password', [AuthController::class, 'forgotPassword'])->name('forgot.password');
+
+Route::post('/resend-otp', [AuthController::class, 'resendOtp'])->name('resend.otp');
+Route::get('/logout', [AuthController::class, 'logout'])->name('logout');
+Route::get('/category/{slug}', [ProductController::class, 'categoryProducts']);
 // Cart Routes (Requires Auth - Checked in Controller)
 Route::get('/cart', [CartController::class, 'index'])->name('cart');
 Route::post('/cart/add', [CartController::class, 'addToCart'])->name('cart.add');

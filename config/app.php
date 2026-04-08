@@ -52,8 +52,8 @@ return [
     |
     */
 
-    'url' => env('APP_URL', 'http://localhost'),
-
+    'api_base_url' => env('API_BASE_URL', 'http://localhost/api'),
+    // 'web_url' =>('https://pharma.jagods.in'),
     /*
     |--------------------------------------------------------------------------
     | Application Timezone

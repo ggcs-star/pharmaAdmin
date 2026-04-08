@@ -7,13 +7,19 @@ use Illuminate\Support\Facades\Http;
 
 class CartController extends Controller
 {
-    protected $apiBaseUrl = 'http://127.0.0.1:8000/api';
+   protected $apiBaseUrl;
+
+public function __construct()
+{
+    $this->apiBaseUrl = env('API_BASE_URL');
+}
 
     /* ===============================
         CART PAGE
     =============================== */
     public function index()
     {
+        // dd($this->apiBaseUrl);
         if (!session('user_token')) {
             return redirect()->route('login')->with('error', 'Please login to view your cart');
         }
@@ -22,7 +28,7 @@ class CartController extends Controller
             $response = Http::withToken(session('user_token'))
                 ->timeout(10)
                 ->get($this->apiBaseUrl . '/cart');
-
+// dd($response);
             if ($response->successful()) {
 
                 $data = $response->json();
