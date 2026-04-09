@@ -64,18 +64,21 @@ public function show($id)
             // ✅ USER
             $order['user'] = [
                 'name'   => $order['user']['name'] ?? 'N/A',
-                'mobile' => $order['user']['mobile'] ?? 'N/A',
+                // 'mobile' => $order['user']['mobile'] ?? 'N/A',
                 'email'  => $order['user']['email'] ?? 'N/A',
             ];
 
-            // ✅ ADDRESS (🔥 NEW)
-            $order['address'] = [
-                'line1'   => $order['address']['line1'] ?? 'N/A',
-                'city'    => $order['address']['city'] ?? 'N/A',
-                'state'   => $order['address']['state'] ?? 'N/A',
-                'pincode' => $order['address']['pincode'] ?? 'N/A',
-            ];
-
+  if (!empty($order['address'])) {
+    $order['address'] = [
+        'name'    => $order['address']['name'] ?? 'N/A',
+        'line1'   => $order['address']['line1'] ?? $order['address']['address_line_1'] ?? 'N/A',
+        'line2'   => $order['address']['line2'] ?? $order['address']['address_line_2'] ?? '',
+        'city'    => $order['address']['city'] ?? 'N/A',
+        'state'   => $order['address']['state'] ?? 'N/A',
+        'pincode' => $order['address']['pincode'] ?? 'N/A',
+        'mobile'  => $order['address']['mobile'] ?? $order['address']['phone'] ?? 'N/A',
+    ];
+}
             // ✅ ITEMS
           if (!empty($order['items'])) {
     foreach ($order['items'] as &$item) {

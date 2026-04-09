@@ -75,104 +75,138 @@ public function __construct()
     /* ===============================
         ADD TO CART
     =============================== */
-    public function addToCart(Request $request)
-    {
-        if (!session('user_token')) {
-            return redirect()->route('login')->with('error', 'Login required');
-        }
-
-        $request->validate([
-            'batch_id' => 'required|integer',
-            'qty' => 'required|integer|min:1'
-        ]);
-
-        try {
-            $response = Http::withToken(session('user_token'))
-                ->timeout(10)
-                ->post($this->apiBaseUrl . '/cart/add', [
-                    'batch_id' => $request->batch_id,
-                    'qty' => $request->qty
-                ]);
-
-            if ($response->successful()) {
-                $this->refreshCartCount();
-if ($response->successful()) {
-
-    // 🔥 latest cart count fetch
-    $cartResponse = Http::withToken(session('user_token'))
-        ->get($this->apiBaseUrl . '/cart');
-
-    $count = 0;
-
-    if ($cartResponse->successful()) {
-        $data = $cartResponse->json();
-        $count = collect($data['items'] ?? [])->sum('qty');
+  public function addToCart(Request $request)
+{
+    // ✅ LOGIN CHECK (IMPORTANT FIX)
+    if (!session('user_token')) {
+        return response()->json([
+            'status' => false,
+            'message' => 'Unauthenticated'
+        ], 401);
     }
 
-    return response()->json([
-        'success' => true,
-        'cart_count' => $count
+    // ✅ VALIDATION
+    $request->validate([
+        'batch_id' => 'required|integer',
+        'qty' => 'required|integer|min:1'
     ]);
-}            }
 
-            return redirect()->back()->with('error', 'Failed to add');
+    try {
 
-        } catch (\Exception $e) {
-            return redirect()->back()->with('error', 'Cart service error');
+        // ✅ ADD TO CART API CALL
+        $response = Http::withToken(session('user_token'))
+            ->timeout(10)
+            ->post($this->apiBaseUrl . '/cart/add', [
+                'batch_id' => $request->batch_id,
+                'qty' => $request->qty
+            ]);
+
+        if ($response->successful()) {
+
+            // 🔥 FETCH UPDATED CART COUNT
+            $cartResponse = Http::withToken(session('user_token'))
+                ->get($this->apiBaseUrl . '/cart');
+
+            $count = 0;
+
+            if ($cartResponse->successful()) {
+                $data = $cartResponse->json();
+                $count = collect($data['items'] ?? [])->sum('qty');
+            }
+
+            // ✅ SAVE IN SESSION (OPTIONAL BUT GOOD)
+            session(['cart_count' => $count]);
+
+            // ✅ RETURN JSON (VERY IMPORTANT FOR AJAX)
+            return response()->json([
+                'success' => true,
+                'cart_count' => $count,
+                'message' => 'Added to cart'
+            ]);
         }
-    }
 
+        return response()->json([
+            'success' => false,
+            'message' => 'Failed to add'
+        ], 400);
+
+    } catch (\Exception $e) {
+
+        return response()->json([
+            'success' => false,
+            'message' => 'Cart service error'
+        ], 500);
+    }
+}
     /* ===============================
         UPDATE CART
     =============================== */
-    public function update(Request $request)
-    {
-        $request->validate([
-            'cart_id' => 'required|integer', // ✅ FIXED
-            'qty' => 'required|integer|min:1'
+ public function update(Request $request)
+{
+    $request->validate([
+        'cart_id' => 'required|integer',
+        'qty' => 'required|integer|min:1'
+    ]);
+
+    try {
+        $response = Http::withToken(session('user_token'))
+            ->post($this->apiBaseUrl . '/cart/update', [
+                'cart_id' => $request->cart_id,
+                'qty' => $request->qty
+            ]);
+
+        if ($response->successful()) {
+            $this->refreshCartCount();
+
+            return response()->json([
+                'status' => true,
+                'summary' => $response->json()['summary'] ?? []
+            ]);
+        }
+
+        return response()->json([
+            'status' => false,
+            'message' => 'Update failed'
         ]);
 
-        try {
-            $response = Http::withToken(session('user_token'))
-                ->timeout(10)
-                ->post($this->apiBaseUrl . '/cart/update', [
-                    'cart_id' => $request->cart_id, // ✅ FIXED
-                    'qty' => $request->qty
-                ]);
-
-            if ($response->successful()) {
-                $this->refreshCartCount();
-                return redirect()->route('cart')->with('success', 'Updated');
-            }
-
-            return redirect()->route('cart')->with('error', 'Update failed');
-
-        } catch (\Exception $e) {
-            return redirect()->route('cart')->with('error', 'Update error');
-        }
+    } catch (\Exception $e) {
+        return response()->json([
+            'status' => false,
+            'message' => 'Update error'
+        ]);
     }
+}
 
     /* ===============================
         REMOVE ITEM
     =============================== */
-    public function remove($id)
-    {
-        try {
-            $response = Http::withToken(session('user_token'))
-                ->timeout(10)
-                ->delete($this->apiBaseUrl . "/cart/remove/{$id}");
+public function remove($id)
+{
+    try {
+        $response = Http::withToken(session('user_token'))
+            ->delete($this->apiBaseUrl . "/cart/remove/{$id}");
 
-            if ($response->successful()) {
-                $this->refreshCartCount();
-                return redirect()->route('cart')->with('success', 'Removed');
-            }
+        if ($response->successful()) {
+            $this->refreshCartCount();
 
-            return redirect()->route('cart')->with('error', 'Remove failed');
-
-        } catch (\Exception $e) {
-            return redirect()->route('cart')->with('error', 'Remove error');
+            return response()->json([
+                'status' => true,
+                'summary' => $response->json()['summary'] ?? []
+            ]);
         }
+
+        return response()->json([
+            'status' => false,
+            'message' => 'Remove failed'
+        ]);
+
+    } catch (\Exception $e) {
+        return response()->json([
+            'status' => false,
+            'message' => 'Remove error'
+        ]);
     }
+}
 
     /* ===============================
         CLEAR CART
