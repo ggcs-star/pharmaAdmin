@@ -340,8 +340,7 @@
 @endphp
 
 @if($cartCount > 0)
-    <span class="cart-badge">{{ $cartCount }}</span>
-@endif
+<span class="cart-badge" id="cart-count">{{ $cartCount }}</span>@endif
                         </a>
                     </li>
                 </ul>
@@ -510,6 +509,35 @@
                 alert.style.display = 'none';
             });
         }, 5000);
+
+        function addToCart(itemId) {
+    fetch('/add-to-cart', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+        },
+        body: JSON.stringify({
+            item_id: itemId,
+            qty: 1
+        })
+    })
+    .then(res => res.json())
+    .then(data => {
+        // 🔥 badge update
+        let badge = document.getElementById('cart-count');
+
+        if (badge) {
+            badge.innerText = data.cart_count;
+        } else {
+            // agar pehle badge nahi tha
+            let cartIcon = document.querySelector('.nav-item.position-relative');
+            cartIcon.insertAdjacentHTML('beforeend',
+                `<span class="cart-badge" id="cart-count">${data.cart_count}</span>`
+            );
+        }
+    });
+}
         
         // Scroll to Top functionality
         const scrollTop = document.getElementById('scrollTop');
