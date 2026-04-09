@@ -246,13 +246,13 @@
                                 <span class="fw-medium">{{ $order['user']['email'] ?? 'N/A' }}</span>
                             </div>
                         </div>
-                        <div class="d-flex align-items-center gap-3 p-2 rounded-3 bg-light">
+                        <!-- <div class="d-flex align-items-center gap-3 p-2 rounded-3 bg-light">
                             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0d6efd" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.362 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.574 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
                             <div>
                                 <small class="text-muted d-block">Mobile</small>
                                 <span class="fw-medium">{{ $order['user']['mobile'] ?? 'N/A' }}</span>
                             </div>
-                        </div>
+                        </div> -->
                     </div>
                 </div>
 
@@ -265,25 +265,44 @@
                         <h6 class="mb-0 fw-semibold">Shipping Address</h6>
                     </div>
                     
-                    @if(!empty($order['address']))
-                        <div class="bg-light p-3 rounded-3">
-                            <p class="fw-semibold mb-1">{{ $order['user']['name'] ?? 'Customer' }}</p>
-                            <p class="mb-1">{{ $order['address']['line1'] ?? 'N/A' }}</p>
-                            @if(!empty($order['address']['line2']))
-                                <p class="mb-1">{{ $order['address']['line2'] }}</p>
-                            @endif
-                            <p class="mb-0">
-                                {{ $order['address']['city'] ?? '' }}, {{ $order['address']['state'] ?? '' }} - {{ $order['address']['pincode'] ?? '' }}
-                            </p>
-                            <p class="mt-3 mb-0 text-muted small d-flex align-items-center">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="me-1"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.362 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.574 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
-                                {{ $order['user']['mobile'] ?? 'N/A' }}
-                            </p>
-                        </div>
-                    @else
-                        <p class="text-muted">No shipping address provided.</p>
-                    @endif
-                </div>
+
+@if(!empty($order['address']))
+    <div class="bg-light p-3 rounded-3">
+
+        {{-- Name --}}
+        <p class="fw-semibold mb-1">
+            {{ $order['address']['name'] ?? $order['user']['name'] ?? 'Customer' }}
+        </p>
+
+        {{-- Address Line 1 --}}
+        <p class="mb-1">
+            {{ $order['address']['line1'] ?? 'N/A' }}
+        </p>
+
+        {{-- Address Line 2 --}}
+        @if(!empty($order['address']['line2']))
+            <p class="mb-1">
+                {{ $order['address']['line2'] }}
+            </p>
+        @endif
+
+        {{-- City State --}}
+        <p class="mb-0">
+            {{ $order['address']['city'] ?? '' }},
+            {{ $order['address']['state'] ?? '' }}
+            - {{ $order['address']['pincode'] ?? '' }}
+        </p>
+
+        {{-- Mobile --}}
+        <p class="mt-3 mb-0 text-muted small">
+📞 {{ $order['address']['mobile'] ?? $order['address']['phone'] ?? $order['user']['mobile'] ?? 'N/A' }}
+        </p>
+
+    </div>
+@else
+    <p class="text-muted">No shipping address provided.</p>
+@endif
+
 
                 {{-- 🔥 PAYMENT DETAILS --}}
                 <div class="card shadow-sm border-0 rounded-4 p-4 hover-card">

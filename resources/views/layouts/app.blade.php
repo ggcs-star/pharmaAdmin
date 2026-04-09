@@ -329,19 +329,10 @@
                     <li class="nav-item position-relative">
                         <a class="nav-link" href="{{ route('cart') }}">
                             <i class="fas fa-shopping-cart"></i> Cart
-                        @php
-    $cartCount = 0;
-
-    if(auth()->check()){
-        $cartCount = \DB::table('carts')
-            ->where('user_id', auth()->id())
-            ->sum('qty');
-    }
-@endphp
-
-@if($cartCount > 0)
-<span class="cart-badge" id="cart-count">{{ $cartCount }}</span>@endif
-                        </a>
+    <span class="cart-badge" id="cart-count" style="display:none;">
+    0
+</span>
+                       </a>
                     </li>
                 </ul>
             </div>
@@ -528,13 +519,24 @@
         let badge = document.getElementById('cart-count');
 
         if (badge) {
-            badge.innerText = data.cart_count;
-        } else {
+let count = parseInt(data.cart_count) || 0;
+
+if (count > 0) {
+    badge.style.display = "flex";
+    badge.innerText = count;
+} else {
+    badge.style.display = "none";
+    badge.innerText = "";
+}     } else {
             // agar pehle badge nahi tha
             let cartIcon = document.querySelector('.nav-item.position-relative');
-            cartIcon.insertAdjacentHTML('beforeend',
-                `<span class="cart-badge" id="cart-count">${data.cart_count}</span>`
-            );
+         let count = parseInt(data.cart_count) || 0;
+
+if (count > 0) {
+    cartIcon.insertAdjacentHTML('beforeend',
+        `<span class="cart-badge" id="cart-count">${count}</span>`
+    );
+}
         }
     });
 }
@@ -594,7 +596,35 @@
             }, 3000);
         }
     </script>
+    <script>
+document.addEventListener("DOMContentLoaded", function () {
+
+    fetch("{{ env('API_BASE_URL') }}/cart", {
+        headers: {
+            "Authorization": "Bearer {{ session('user_token') }}"
+        }
+    })
+    .then(res => res.json())
+    .then(data => {
+       let count = data.items?.reduce((sum, i) => sum + i.qty, 0) || 0;
+
+let el = document.getElementById("cart-count");
+
+if (count > 0) {
+    el.style.display = "flex"; // because badge flex me hai
+    el.innerText = count;
+} else {
+    el.style.display = "none";
+}
+    })
+    .catch(() => {
+let el = document.getElementById("cart-count");
+el.style.display = "none";    });
+
+});
+</script>
     
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     @stack('scripts')
 </body>
 </html>

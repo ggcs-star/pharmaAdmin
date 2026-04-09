@@ -1,298 +1,780 @@
+{{-- resources/views/cart/index.blade.php --}}
 @extends('layouts.app')
+
+@php
+    $s3Base = "https://pharma-catalog-assets.s3.us-east-1.amazonaws.com";
+@endphp
 
 @section('title', 'My Cart')
 
 @section('content')
-<div class="container py-5">
+<div class="container py-4 py-md-5">
 
-    <h1 class="fw-bold mb-4">Shopping Cart</h1>
+    <h1 class="fw-bold mb-4 d-flex align-items-center gap-2">
+        <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-primary"><circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/></svg>
+        Shopping Cart
+        <span class="cart-count-badge ms-2">{{ count($cart['items'] ?? []) }}</span>
+    </h1>
 
     @if(empty($cart['items']) || count($cart['items']) == 0)
-        <div class="text-center py-5 bg-white rounded shadow-sm">
-            <h4>Your cart is empty</h4>
-            <a href="{{ route('home') }}" class="btn btn-success mt-3">
+        <div id="empty-cart-message" class="text-center py-5 bg-white rounded-4 shadow-sm">
+            <div class="bg-light d-inline-flex p-4 rounded-circle mb-4">
+                <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#6c757d" stroke-width="1.5"><circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/></svg>
+            </div>
+            <h4 class="fw-semibold mb-2">Your cart is empty</h4>
+            <p class="text-muted mb-4">Looks like you haven't added anything yet</p>
+            <a href="{{ route('home') }}" class="btn btn-primary rounded-pill px-5 py-2 shadow-sm hover-lift">
                 Continue Shopping
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
             </a>
         </div>
     @else
 
-    <div class="row">
+    <div class="row g-4" id="cart-content-wrapper">
 
-        {{-- LEFT --}}
-        <div class="col-lg-8 mb-4">
-            <div class="bg-white rounded shadow-sm">
+        {{-- LEFT: Cart Items --}}
+        <div class="col-lg-8">
+            <div class="card shadow-sm border-0 rounded-4 overflow-hidden hover-card">
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table align-middle mb-0" id="cart-table">
+                            <thead class="bg-light">
+                                <tr class="border-0">
+                                    <th class="ps-4 py-3 border-0">Product</th>
+                                    <th class="py-3 border-0">Price</th>
+                                    <th class="py-3 border-0">Qty</th>
+                                    <th class="py-3 border-0">Total</th>
+                                    <th class="pe-4 py-3 border-0"></th>
+                                </tr>
+                            </thead>
+                            <tbody id="cart-items-body">
+                                @foreach($cart['items'] as $item)
+                                <tr class="item-row cart-item-row" data-id="{{ $item['id'] }}" data-price="{{ $item['price'] }}">
+                                    {{-- Product with Image --}}
+                                    <td class="ps-4">
+                                        <div class="d-flex align-items-center gap-3">
+                                            <img src="{{ 
+                                                (!empty($item['main_image']) && filter_var($item['main_image'], FILTER_VALIDATE_URL)) 
+                                                    ? $item['main_image'] 
+                                                    : 'https://cdn-icons-png.flaticon.com/512/2966/2966486.png'
+                                            }}" 
+                                            class="rounded-3 border"
+                                            style="width: 64px; height: 64px; object-fit: cover;"
+                                            alt="{{ $item['name'] }}"
+                                            onerror="this.onerror=null;this.src='https://cdn-icons-png.flaticon.com/512/2966/2966486.png';">
+                                            <div>
+                                                <strong class="fw-semibold">{{ $item['name'] }}</strong>
+                                                @if(!empty($item['generic_name']))
+                                                    <small class="text-muted d-block">{{ $item['generic_name'] }}</small>
+                                                @endif
+                                            </div>
+                                        </div>
+                                    </td>
 
-                <table class="table align-middle">
-                    <thead class="bg-light">
-                        <tr>
-                            <th>Product</th>
-                            <th>Price</th>
-                            <th>Qty</th>
-                            <th>Total</th>
-                            <th></th>
-                        </tr>
-                    </thead>
+                                    {{-- Price --}}
+                                    <td class="text-success fw-semibold item-price" data-id="{{ $item['id'] }}">
+                                        ₹{{ number_format($item['price'], 2) }}
+                                    </td>
 
-                    <tbody>
-                        @foreach($cart['items'] as $item)
-                        <tr>
-                            <td><strong>{{ $item['name'] }}</strong></td>
-                            <td>₹{{ number_format($item['total_price'], 2) }}</td>
+                                    {{-- Quantity with Flipkart Style Controls --}}
+                                    <td class="qty-cell">
+                                        <div class="quantity-control-wrapper" data-id="{{ $item['id'] }}">
+                                            <button type="button" class="qty-btn qty-decrease" data-id="{{ $item['id'] }}" {{ $item['qty'] <= 1 ? 'disabled' : '' }}>−</button>
+                                            <span class="qty-value" data-id="{{ $item['id'] }}">{{ $item['qty'] }}</span>
+                                            <button type="button" class="qty-btn qty-increase" data-id="{{ $item['id'] }}">+</button>
+                                        </div>
+                                    </td>
 
-                            <td>
-                                <form action="{{ route('cart.update') }}" method="POST">
-                                    @csrf
-                                    <input type="hidden" name="cart_id" value="{{ $item['id'] }}">
-                                    <input type="number" name="qty" value="{{ $item['qty'] }}" min="1" class="form-control" style="width:80px;">
-                                </form>
-                            </td>
+                                    {{-- Total --}}
+                                    <td class="fw-bold text-dark item-total" data-id="{{ $item['id'] }}">
+                                        ₹{{ number_format($item['total_price'], 2) }}
+                                    </td>
 
-                            <td class="text-success fw-bold">
-                                ₹{{ number_format($item['total_price'], 2) }}
-                            </td>
-
-                            <td>
-                                <a href="{{ route('cart.remove', $item['id']) }}"
-                                   class="btn btn-sm btn-danger">
-                                   Remove
-                                </a>
-                            </td>
-                        </tr>
-                        @endforeach
-                    </tbody>
-                </table>
-
+                                    {{-- Remove --}}
+                                    <td class="pe-4">
+                                        <button type="button" 
+                                           class="btn btn-sm btn-outline-danger rounded-circle p-1 remove-item-btn" 
+                                           style="width: 32px; height: 32px;"
+                                           data-id="{{ $item['id'] }}"
+                                           title="Remove">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                                        </button>
+                                    </td>
+                                </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                {{-- Cart Footer with Continue Shopping --}}
+                <div class="card-footer bg-white border-0 p-4">
+                    <a href="{{ route('home') }}" class="text-decoration-none fw-semibold hover-lift d-inline-flex align-items-center gap-1">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg>
+                        Continue Shopping
+                    </a>
+                </div>
             </div>
         </div>
 
-        {{-- RIGHT --}}
+        {{-- RIGHT: Order Summary & Checkout --}}
         <div class="col-lg-4">
-            <div class="bg-white rounded shadow-sm p-4">
-
-                <h5 class="fw-bold mb-3">Order Summary</h5>
-
-                <div class="d-flex justify-content-between">
-                    <span>Total</span>
-                    <strong class="text-success">
-                        ₹{{ number_format($cart['summary']['total'], 2) }}
-                    </strong>
+            <div class="card shadow-sm border-0 rounded-4 p-4 hover-card mb-4">
+                <h5 class="fw-bold mb-3 d-flex align-items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
+                    Order Summary
+                </h5>
+                
+                <div class="d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom">
+                    <span class="text-muted">Subtotal</span>
+                    <strong id="summary-subtotal" class="text-success fs-5">₹{{ number_format($cart['summary']['total'], 2) }}</strong>
+                </div>
+                
+                <div class="d-flex justify-content-between mb-3">
+                    <span class="text-muted">Shipping</span>
+                    <span class="text-success fw-semibold">Free</span>
+                </div>
+                
+                <div class="d-flex justify-content-between mb-4 pb-2 border-bottom">
+                    <span class="text-muted">Tax (GST)</span>
+                    <span class="text-muted">Included</span>
+                </div>
+                
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <span class="fw-bold fs-5">Total</span>
+                    <span id="summary-total" class="fw-bold text-success fs-3">₹{{ number_format($cart['summary']['total'], 2) }}</span>
                 </div>
 
-                <hr>
+                <hr class="my-2">
 
-                {{-- 🔥 ADDRESS DROPDOWN (API BASED) --}}
-                <div class="mb-3">
-                    <label class="fw-bold">Select Address</label>
-
-                    <select id="address_id" class="form-control mb-2">
-                        <option value="">Loading...</option>
+                {{-- ADDRESS DROPDOWN (API BASED) --}}
+                <div class="mb-4">
+                    <label class="fw-semibold mb-2 d-flex align-items-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+                        Select Address
+                    </label>
+                    <select id="address_id" class="form-select rounded-pill shadow-sm bg-light border-0 py-2 mb-2">
+                        <option value="">Loading addresses...</option>
                     </select>
-
-                    <a href="{{ url('/addresses') }}" class="btn btn-outline-primary w-100">
+                    <a href="{{ url('/addresses') }}" class="btn btn-outline-primary rounded-pill w-100 py-2 hover-lift">
                         + Add / Manage Address
                     </a>
                 </div>
 
-                {{-- COD --}}
-                <form action="{{ route('orders.place') }}" method="POST" onsubmit="return setAddress()">
+                {{-- COD Form --}}
+                <form action="{{ route('orders.place') }}" method="POST" onsubmit="return setAddress()" class="mb-3">
                     @csrf
                     <input type="hidden" name="payment_mode" value="cod">
                     <input type="hidden" name="address_id" id="cod_address_id">
-
-                    <button class="btn btn-warning w-100 mb-2">
-                        💵 Cash on Delivery
+                    <button type="submit" class="btn btn-warning rounded-pill w-100 py-2 fw-semibold hover-lift">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="me-1"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+                        Cash on Delivery
                     </button>
                 </form>
 
-                {{-- ONLINE --}}
-                <button id="pay-btn" class="btn btn-success w-100">
-                    💳 Pay Online
+                {{-- Pay Online Button --}}
+                <button id="pay-btn" class="btn btn-success rounded-pill w-100 py-2 fw-semibold hover-lift">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="me-1"><rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/></svg>
+                    Pay Online
                 </button>
+            </div>
 
+            {{-- Trust Badge --}}
+            <div class="card shadow-sm border-0 rounded-4 p-3 bg-light text-center">
+                <div class="d-flex justify-content-center gap-4">
+                    <div class="text-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#28a745" stroke-width="1.5"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
+                        <small class="d-block text-muted">Secure</small>
+                    </div>
+                    <div class="text-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#28a745" stroke-width="1.5"><path d="M20 12V8H6V4H4v16h16v-4"/><path d="m12 12 4 4-4 4"/><path d="M16 12v8"/></svg>
+                        <small class="d-block text-muted">Free Shipping</small>
+                    </div>
+                    <div class="text-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#28a745" stroke-width="1.5"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                        <small class="d-block text-muted">Genuine</small>
+                    </div>
+                </div>
             </div>
         </div>
-
     </div>
 
     @endif
 
 </div>
+
+{{-- Loading Overlay --}}
+<!-- <div id="cart-ajax-loader" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.7); z-index: 9999;"> -->
+    <!-- <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div> -->
+    <!-- </div>
+</div> -->
+
 @endsection
 
 @push('scripts')
 <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
 
 <script>
-
-const API_BASE = "{{ env('API_BASE_URL') }}";
-const token = document.querySelector('meta[name="api-token"]')?.getAttribute('content');
-const csrf = document.querySelector('meta[name="csrf-token"]').content;
-
-// ===============================
-// LOAD ADDRESSES
-// ===============================
-function loadAddresses() {
-
-    fetch(API_BASE + "/addresses", {
-        headers: {
-            "Authorization": "Bearer " + token,
-            "Accept": "application/json"
+(function() {
+    'use strict';
+    
+    // Configuration
+    const API_BASE = "{{ env('API_BASE_URL') }}";
+    const token = document.querySelector('meta[name="api-token"]')?.getAttribute('content');
+    const csrf = document.querySelector('meta[name="csrf-token"]')?.content;
+    const UPDATE_URL = "{{ route('cart.update') }}";
+    const REMOVE_BASE_URL = "{{ url('cart/remove') }}";
+    
+    // DOM Elements
+    const loader = document.getElementById('cart-ajax-loader');
+    const cartBody = document.getElementById('cart-items-body');
+    const summarySubtotal = document.getElementById('summary-subtotal');
+    const summaryTotal = document.getElementById('summary-total');
+    const cartCountBadge = document.querySelector('.cart-count-badge');
+    const emptyCartMessage = document.getElementById('empty-cart-message');
+    const cartContentWrapper = document.getElementById('cart-content-wrapper');
+    
+    // Helper Functions
+    function showLoader() {
+        if (loader) loader.style.display = 'block';
+    }
+    
+    function hideLoader() {
+        if (loader) loader.style.display = 'none';
+    }
+    
+    function formatIndianRupee(amount) {
+        return '₹' + parseFloat(amount).toFixed(2).replace(/\d(?=(\d{3})+\.)/g, '$&,');
+    }
+    
+    // Disable/enable quantity buttons for a specific row
+    function setButtonsState(itemId, disabled) {
+        const wrapper = document.querySelector(`.quantity-control-wrapper[data-id="${itemId}"]`);
+        if (wrapper) {
+            const buttons = wrapper.querySelectorAll('.qty-btn');
+            buttons.forEach(btn => btn.disabled = disabled);
         }
-    })
-    .then(res => res.json())
-    .then(res => {
-
-        let dropdown = document.getElementById("address_id");
-
-        if (!dropdown) return;
-
-        dropdown.innerHTML = '<option value="">Select Address</option>';
-
-        if (!res.data || res.data.length === 0) {
-            dropdown.innerHTML = '<option value="">No Address Found</option>';
-            return;
+        // Also disable remove button
+        const removeBtn = document.querySelector(`.remove-item-btn[data-id="${itemId}"]`);
+        if (removeBtn) removeBtn.disabled = disabled;
+    }
+    
+    // Update cart totals
+    function updateCartSummary(subtotal) {
+        if (summarySubtotal) {
+            summarySubtotal.textContent = '₹' + parseFloat(subtotal).toFixed(2);
         }
+        if (summaryTotal) {
+            summaryTotal.textContent = '₹' + parseFloat(subtotal).toFixed(2);
+        }
+    }
+    
+    // Update cart count badge
+    function updateCartCount() {
+        const visibleRows = document.querySelectorAll('.cart-item-row:not(.removing)').length;
+        if (cartCountBadge) {
+            cartCountBadge.textContent = visibleRows;
+        }
+        
+        // Update navbar cart count if exists
+        const navbarCartCount = document.querySelector('.cart-count, #cart-count, .navbar-cart-count');
+        if (navbarCartCount) {
+            navbarCartCount.textContent = visibleRows;
+        }
+    }
+    
+    // Check if cart is empty and show/hide appropriate sections
+    function checkEmptyState() {
+        const visibleRows = document.querySelectorAll('.cart-item-row:not(.removing)').length;
+        
+        if (visibleRows === 0) {
+            if (cartContentWrapper) cartContentWrapper.style.display = 'none';
+            if (emptyCartMessage) emptyCartMessage.style.display = 'block';
+        } else {
+            if (cartContentWrapper) cartContentWrapper.style.display = 'flex';
+            if (emptyCartMessage) emptyCartMessage.style.display = 'none';
+        }
+    }
+    
+    // AJAX Update Quantity
+    async function updateQuantity(cartId, newQty) {
+        // showLoader();
+        setButtonsState(cartId, true);
+        
+        const formData = new FormData();
+        formData.append('cart_id', cartId);
+        formData.append('qty', newQty);
+        formData.append('_token', csrf);
+        
+        try {
+            const response = await fetch(UPDATE_URL, {
+                method: 'POST',
+                headers: {
+                    'X-CSRF-TOKEN': csrf,
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Accept': 'application/json'
+                },
+                body: formData
+            });
+            
+            const data = await response.json();
+            
+            // Handle both response formats: {status: true} or {success: true}
+            const isSuccess = data.status === true || data.success === true;
+            
+            if (isSuccess) {
+                // Update quantity display
+                const qtySpan = document.querySelector(`.qty-value[data-id="${cartId}"]`);
+                if (qtySpan) {
+                    qtySpan.textContent = newQty;
+                }
+                
+                // Update decrease button state
+                const decreaseBtn = document.querySelector(`.qty-decrease[data-id="${cartId}"]`);
+                if (decreaseBtn) {
+                    decreaseBtn.disabled = newQty <= 1;
+                }
+                
+                // Update item total
+                const row = document.querySelector(`.cart-item-row[data-id="${cartId}"]`);
+                if (row) {
+                    const price = parseFloat(row.dataset.price);
+                    const totalElement = row.querySelector('.item-total');
+                    if (totalElement) {
+                        totalElement.textContent = formatIndianRupee(price * newQty);
+                    }
+                }
+                
+                // Calculate and update new subtotal
+                let newSubtotal = 0;
+                document.querySelectorAll('.cart-item-row').forEach(r => {
+                    const rowPrice = parseFloat(r.dataset.price);
+                    const rowQty = parseInt(r.querySelector('.qty-value')?.textContent || 0);
+                    newSubtotal += rowPrice * rowQty;
+                });
+                
+                updateCartSummary(newSubtotal);
+                
+            } else {
+                alert(data.message || 'Failed to update quantity');
+                // Revert quantity display if needed
+                const qtySpan = document.querySelector(`.qty-value[data-id="${cartId}"]`);
+                if (qtySpan) {
+                    const currentQty = parseInt(qtySpan.textContent);
+                    const decreaseBtn = document.querySelector(`.qty-decrease[data-id="${cartId}"]`);
+                    if (decreaseBtn) {
+                        decreaseBtn.disabled = currentQty <= 1;
+                    }
+                }
+            }
+        } catch (error) {
+            console.error('Error updating quantity:', error);
+            alert('Something went wrong. Please try again.');
+        } finally {
+            // hideLoader();
+            setButtonsState(cartId, false);
+        }
+    }
+    
+    // AJAX Remove Item
+async function removeCartItem(cartId) {
 
-        res.data.forEach(addr => {
+    showLoader();
 
-            let option = document.createElement("option");
-            option.value = addr.id;
-            option.text = addr.name + " - " + addr.city;
+    setButtonsState(cartId, true);
 
-            dropdown.appendChild(option);
-
-            // default select
-            if (addr.is_default) {
-                dropdown.value = addr.id;
-                localStorage.setItem("selected_address_id", addr.id);
+    try {
+        const response = await fetch(`${REMOVE_BASE_URL}/${cartId}`, {
+            method: 'GET',
+            headers: {
+                'X-CSRF-TOKEN': csrf,
+                'X-Requested-With': 'XMLHttpRequest',
+                'Accept': 'application/json'
             }
         });
 
-        // restore selected
-        let saved = localStorage.getItem("selected_address_id");
-        if (saved) dropdown.value = saved;
+        const data = await response.json();
 
-    })
-    .catch(err => {
-        console.error("Address load error:", err);
-    });
-}
+        const isSuccess = data.status === true || data.success === true;
 
-// ===============================
-// SAVE SELECTED ADDRESS
-// ===============================
-document.getElementById("address_id")?.addEventListener("change", function () {
-    localStorage.setItem("selected_address_id", this.value);
-});
+        if (isSuccess) {
+            const row = document.querySelector(`.cart-item-row[data-id="${cartId}"]`);
+            if (row) {
+                row.classList.add('removing');
+                row.style.transition = 'opacity 0.3s ease';
+                row.style.opacity = '0';
 
-// ===============================
-// COD ORDER
-// ===============================
-function setAddress() {
-    let addr = document.getElementById('address_id').value;
+                setTimeout(() => {
+                    row.remove();
 
-    if (!addr) {
-        alert("⚠️ Please select address");
-        return false;
-    }
+                    let newSubtotal = 0;
+                    document.querySelectorAll('.cart-item-row:not(.removing)').forEach(r => {
+                        const rowPrice = parseFloat(r.dataset.price);
+                        const rowQty = parseInt(r.querySelector('.qty-value')?.textContent || 0);
+                        newSubtotal += rowPrice * rowQty;
+                    });
 
-    document.getElementById('cod_address_id').value = addr;
-    return true;
-}
-
-// ===============================
-// ONLINE PAYMENT (RAZORPAY)
-// ===============================
-document.getElementById('pay-btn')?.addEventListener('click', function () {
-
-    let addressId = document.getElementById('address_id').value;
-
-    if (!addressId) {
-        alert("⚠️ Please select address");
-        return;
-    }
-
-    // STEP 1: Create Razorpay Order
-    fetch('/payment/create', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRF-TOKEN': csrf
-        },
-        body: JSON.stringify({
-            amount: {{ $cart['summary']['total'] }}
-        })
-    })
-    .then(res => res.json())
-    .then(data => {
-
-        if (!data.success) {
-            alert("❌ Payment init failed");
-            return;
+                    updateCartSummary(newSubtotal);
+                    updateCartCount();
+                    checkEmptyState();
+                }, 300);
+            }
+        } else {
+            alert(data.message || 'Failed to remove item');
+            setButtonsState(cartId, false);
         }
+    } catch (error) {
+        console.error('Error removing item:', error);
+        alert('Something went wrong. Please try again.');
+        setButtonsState(cartId, false);
+    } finally {
+        hideLoader();
+    }
+}
+    
+    // Event Delegation for all cart interactions
+    document.addEventListener('click', function(e) {
+        // Quantity Increase
+        if (e.target.closest('.qty-increase')) {
+            e.preventDefault();
+            const btn = e.target.closest('.qty-increase');
+            const cartId = btn.dataset.id;
+            const qtySpan = document.querySelector(`.qty-value[data-id="${cartId}"]`);
+            
+            if (qtySpan) {
+                const newQty = parseInt(qtySpan.textContent) + 1;
+                if (newQty <= 10) { // Optional max limit
+                    updateQuantity(cartId, newQty);
+                }
+            }
+        }
+        
+        // Quantity Decrease
+        if (e.target.closest('.qty-decrease')) {
+            e.preventDefault();
+            const btn = e.target.closest('.qty-decrease');
+            const cartId = btn.dataset.id;
+            const qtySpan = document.querySelector(`.qty-value[data-id="${cartId}"]`);
+            
+            if (qtySpan) {
+                const newQty = parseInt(qtySpan.textContent) - 1;
+                if (newQty >= 1) {
+                    updateQuantity(cartId, newQty);
+                }
+            }
+        }
+        
+        // Remove Item
+        if (e.target.closest('.remove-item-btn')) {
+            e.preventDefault();
+            const btn = e.target.closest('.remove-item-btn');
+            const cartId = btn.dataset.id;
+            removeCartItem(cartId);
+        }
+    });
+    
+    // ===============================
+    // LOAD ADDRESSES (KEEP EXACTLY SAME)
+    // ===============================
+    function loadAddresses() {
+        const dropdown = document.getElementById("address_id");
+        if (!dropdown) return;
+    
+        fetch(API_BASE + "/addresses", {
+            headers: {
+                "Authorization": "Bearer " + token,
+                "Accept": "application/json"
+            }
+        })
+        .then(res => res.json())
+        .then(res => {
+            dropdown.innerHTML = '<option value="">Select Address</option>';
+            
+            if (!res.data || res.data.length === 0) {
+                dropdown.innerHTML = '<option value="">No Address Found</option>';
+                return;
+            }
+            
+            res.data.forEach(addr => {
+                let option = document.createElement("option");
+                option.value = addr.id;
+                option.text = addr.name + " - " + addr.city;
+                if (addr.is_default) {
+                    option.selected = true;
+                    localStorage.setItem("selected_address_id", addr.id);
+                }
+                dropdown.appendChild(option);
+            });
+            
+            let saved = localStorage.getItem("selected_address_id");
+            if (saved && document.querySelector(`option[value="${saved}"]`)) {
+                dropdown.value = saved;
+            }
+        })
+        .catch(err => console.error("Address load error:", err));
+    }
+    
+    // Save selected address
+    document.getElementById("address_id")?.addEventListener("change", function() {
+        localStorage.setItem("selected_address_id", this.value);
+    });
+    
+    // COD form handler
+    window.setAddress = function() {
+        let addr = document.getElementById('address_id').value;
+        if (!addr) {
+            alert("⚠️ Please select an address");
+            return false;
+        }
+        document.getElementById('cod_address_id').value = addr;
+        return true;
+    };
+    
+    // ===============================
+    // ONLINE PAYMENT (RAZORPAY) - KEEP EXACTLY SAME
+    // ===============================
+    document.getElementById('pay-btn')?.addEventListener('click', function() {
+      let addressId = document.getElementById('address_id').value;
 
-        // STEP 2: Open Razorpay
-      var options = {
-    key: data.key,
-    amount: data.amount,
-    order_id: data.order_id,
-
-    name: "Pharma ERP",
-    description: "Order Payment",
-
-    handler: function (response) {
-
-        let formData = new FormData();
-        formData.append('address_id', addressId);
-        formData.append('payment_id', response.razorpay_payment_id);
-        formData.append('payment_mode', 'razorpay');
-
-        fetch('/orders/place', {
+if (!addressId || addressId === "" || addressId === "null") {
+    alert("⚠️ Please select a valid address");
+    return;
+}
+        
+        // Get current total from summary
+        const totalText = document.getElementById('summary-total')?.textContent || '0';
+        const amount = parseFloat(totalText.replace(/[^0-9.]/g, ''));
+        
+        fetch('/payment/create', {
             method: 'POST',
             headers: {
+                'Content-Type': 'application/json',
                 'X-CSRF-TOKEN': csrf
             },
-            body: formData
+            body: JSON.stringify({ amount: amount })
         })
         .then(res => res.json())
         .then(data => {
-
-            if (data.status) {
-                alert("✅ Order placed successfully");
-                window.location.href = "/orders";
-            } else {
-                alert("❌ Order failed: " + data.message);
+            if (!data.success) {
+                alert("❌ Payment initialization failed");
+                return;
             }
+            
+            var options = {
+                key: data.key,
+                amount: data.amount,
+                order_id: data.order_id,
+                name: "Pharma ERP",
+                description: "Order Payment",
+                handler: function(response) {
+                    let formData = new FormData();
+                    formData.append('address_id', addressId);
+                    formData.append('payment_id', response.razorpay_payment_id);
+                    formData.append('payment_mode', 'razorpay');
+                    
+                    fetch('/orders/place', {
+                        method: 'POST',
+                        headers: { 'X-CSRF-TOKEN': csrf },
+                        body: formData
+                    })
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data.status) {
+                        Swal.fire({
+    icon: 'success',
+    title: 'Order Placed!',
+    text: 'Your order has been placed successfully 🎉',
+    timer: 2000,
+    showConfirmButton: false
+});
 
+// cart count reset
+const navbarCart = document.querySelector('#cart-count, .cart-count');
+if (navbarCart) navbarCart.innerText = 0;
+
+setTimeout(() => {
+    window.location.href = "/orders";
+}, 2000);
+                        } else {
+                            alert("❌ Order failed: " + data.message);
+                        }
+                    })
+                    .catch(err => {
+                        console.error(err);
+                        alert("Server error while placing order");
+                    });
+                },
+                modal: {
+                    ondismiss: function() {
+                        alert("⚠️ Payment cancelled");
+                    }
+                }
+            };
+            var rzp = new Razorpay(options);
+            rzp.open();
         })
         .catch(err => {
             console.error(err);
-            alert("Server error while placing order");
+            alert("Server error during payment init");
         });
+    });
+    
+    // Initialize
+    loadAddresses();
+    
+    // Hide empty message initially if items exist
+    @if(!empty($cart['items']) && count($cart['items']) > 0)
+        if (emptyCartMessage) emptyCartMessage.style.display = 'none';
+    @endif
+    
+})();
+</script>
+@endpush
 
-    }, // 🔥 handler END here
-
-    modal: {
-        ondismiss: function () {
-            alert("⚠️ Payment cancelled");
+@push('styles')
+<style>
+    /* Quantity Controls - Flipkart Style */
+    .quantity-control-wrapper {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        background: #f5f5f5;
+        padding: 4px 8px;
+        border-radius: 24px;
+    }
+    
+    .qty-btn {
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        border: 1px solid #ddd;
+        background: white;
+        font-size: 18px;
+        font-weight: bold;
+        color: #333;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.2s ease;
+        padding: 0;
+        line-height: 1;
+    }
+    
+    .qty-btn:hover:not(:disabled) {
+        background: #0d6efd;
+        color: white;
+        border-color: #0d6efd;
+    }
+    
+    .qty-btn:disabled {
+        opacity: 0.4;
+        cursor: not-allowed;
+        background: #e9ecef;
+    }
+    
+    .qty-value {
+        min-width: 24px;
+        text-align: center;
+        font-weight: 600;
+        font-size: 15px;
+    }
+    
+    .qty-cell {
+        vertical-align: middle;
+    }
+    
+    /* Cart Count Badge */
+    .cart-count-badge {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 2px 10px;
+        border-radius: 50px;
+        font-size: 16px;
+        font-weight: 600;
+    }
+    
+    /* Smooth Transitions */
+    .hover-lift {
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .hover-lift:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 20px rgba(0,0,0,0.1) !important;
+    }
+    
+    .hover-card {
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .hover-card:hover {
+        box-shadow: 0 12px 30px rgba(0,0,0,0.1) !important;
+    }
+    
+    .item-row {
+        transition: background-color 0.2s ease;
+    }
+    .item-row:hover {
+        background-color: #f8f9fa;
+    }
+    
+    .table > :not(caption) > * > * {
+        padding: 1rem 0.5rem;
+    }
+    
+    .btn-outline-danger:hover svg {
+        stroke: white;
+    }
+    
+    .btn-outline-danger:hover {
+        background-color: #dc3545;
+        border-color: #dc3545;
+    }
+    
+    /* Remove button */
+    .remove-item-btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+        pointer-events: none;
+    }
+    
+    /* Custom scrollbar */
+    ::-webkit-scrollbar {
+        width: 8px;
+        height: 8px;
+    }
+    ::-webkit-scrollbar-track {
+        background: #f1f1f1;
+        border-radius: 10px;
+    }
+    ::-webkit-scrollbar-thumb {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border-radius: 10px;
+    }
+    
+    @media (max-width: 768px) {
+        .table-responsive {
+            border-radius: 1rem;
+        }
+        .table > :not(caption) > * > * {
+            padding: 0.75rem 0.5rem;
+        }
+        .d-flex.align-items-center.gap-3 {
+            flex-direction: column;
+            align-items: flex-start !important;
+        }
+        
+        .quantity-control-wrapper {
+            gap: 6px;
+            padding: 3px 6px;
+        }
+        
+        .qty-btn {
+            width: 24px;
+            height: 24px;
+            font-size: 16px;
         }
     }
-};
-        var rzp = new Razorpay(options);
-        rzp.open();
-
-    })
-    .catch(err => {
-        console.error(err);
-        alert("Server error during payment init");
-    });
-
-});
-
-// ===============================
-// INIT
-// ===============================
-loadAddresses();
-
-</script>
+</style>
 @endpush
