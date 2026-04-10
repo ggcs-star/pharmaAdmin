@@ -3,6 +3,15 @@
 
 @php
     $s3Base = "https://pharma-catalog-assets.s3.us-east-1.amazonaws.com";
+    
+    // Check if cart requires prescription
+    $requiresPrescription = false;
+    foreach($cart['items'] as $item) {
+        if(isset($item['need_prescription']) && $item['need_prescription'] == 1) {
+            $requiresPrescription = true;
+            break;
+        }
+    }
 @endphp
 
 @section('title', 'My Cart')
@@ -53,23 +62,37 @@
                                     {{-- Product with Image --}}
                                     <td class="ps-4">
                                         <div class="d-flex align-items-center gap-3">
-                                            <img src="{{ 
-                                                (!empty($item['main_image']) && filter_var($item['main_image'], FILTER_VALIDATE_URL)) 
-                                                    ? $item['main_image'] 
-                                                    : 'https://cdn-icons-png.flaticon.com/512/2966/2966486.png'
-                                            }}" 
-                                            class="rounded-3 border"
-                                            style="width: 64px; height: 64px; object-fit: cover;"
-                                            alt="{{ $item['name'] }}"
-                                            onerror="this.onerror=null;this.src='https://cdn-icons-png.flaticon.com/512/2966/2966486.png';">
-                                            <div>
-                                                <strong class="fw-semibold">{{ $item['name'] }}</strong>
-                                                @if(!empty($item['generic_name']))
-                                                    <small class="text-muted d-block">{{ $item['generic_name'] }}</small>
-                                                @endif
-                                            </div>
-                                        </div>
-                                    </td>
+
+    {{-- IMAGE --}}
+    @php
+        $image = (!empty($item['main_image']) && filter_var($item['main_image'], FILTER_VALIDATE_URL))
+            ? $item['main_image']
+            : asset('images/default-medicine.png');
+    @endphp
+
+    <img src="{{ $image }}"
+         class="rounded-3 border"
+         style="width: 64px; height: 64px; object-fit: cover;"
+         alt="{{ $item['name'] }}"
+         onerror="this.onerror=null;this.src='{{ asset('images/default-medicine.png') }}';">
+
+    {{-- TEXT --}}
+    <div>
+        <strong class="fw-semibold d-block">{{ $item['name'] }}</strong>
+
+        @if(!empty($item['generic_name']))
+            <small class="text-muted d-block">{{ $item['generic_name'] }}</small>
+        @endif
+
+        @if(isset($item['need_prescription']) && $item['need_prescription'] == 1)
+            <span class="badge bg-warning text-dark mt-1">
+                Rx Required
+            </span>
+        @endif
+    </div>
+
+</div>
+</td> 
 
                                     {{-- Price --}}
                                     <td class="text-success fw-semibold item-price" data-id="{{ $item['id'] }}">
@@ -124,6 +147,17 @@
                     Order Summary
                 </h5>
                 
+                {{-- PRESCRIPTION WARNING --}}
+                @if($requiresPrescription)
+                <div class="alert alert-warning rounded-3 d-flex align-items-start gap-2 mb-3 p-3" role="alert">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="flex-shrink-0 mt-0"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M12 8v4"/><path d="M12 16h.01"/></svg>
+                    <div>
+                        <strong>Prescription Required</strong><br>
+                        <small>This order contains prescription items. Please upload a valid prescription to continue.</small>
+                    </div>
+                </div>
+                @endif
+                
                 <div class="d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom">
                     <span class="text-muted">Subtotal</span>
                     <strong id="summary-subtotal" class="text-success fs-5">₹{{ number_format($cart['summary']['total'], 2) }}</strong>
@@ -160,22 +194,37 @@
                     </a>
                 </div>
 
-                {{-- COD Form --}}
-                <form action="{{ route('orders.place') }}" method="POST" onsubmit="return setAddress()" class="mb-3">
-                    @csrf
-                    <input type="hidden" name="payment_mode" value="cod">
-                    <input type="hidden" name="address_id" id="cod_address_id">
-                    <button type="submit" class="btn btn-warning rounded-pill w-100 py-2 fw-semibold hover-lift">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="me-1"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
-                        Cash on Delivery
+                {{-- CONDITIONAL BUTTONS BASED ON PRESCRIPTION REQUIREMENT --}}
+                @if($requiresPrescription)
+                    {{-- Upload Prescription Button (replaces COD) --}}
+                    <button id="upload-prescription-btn" class="btn btn-primary rounded-pill w-100 py-2 fw-semibold hover-lift mb-3">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="me-1"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>
+                        Upload Prescription
                     </button>
-                </form>
+                    
+                    {{-- Disabled Pay Online Button --}}
+                    <button id="pay-btn" class="btn btn-secondary rounded-pill w-100 py-2 fw-semibold" disabled style="opacity: 0.5; cursor: not-allowed;">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="me-1"><rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/></svg>
+                        Pay Online (Upload Prescription First)
+                    </button>
+                @else
+                    {{-- Normal COD Form --}}
+                    <form action="{{ route('orders.place') }}" method="POST" onsubmit="return setAddress()" class="mb-3">
+                        @csrf
+                        <input type="hidden" name="payment_mode" value="cod">
+                        <input type="hidden" name="address_id" id="cod_address_id">
+                        <button type="submit" class="btn btn-warning rounded-pill w-100 py-2 fw-semibold hover-lift">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="me-1"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+                            Cash on Delivery
+                        </button>
+                    </form>
 
-                {{-- Pay Online Button --}}
-                <button id="pay-btn" class="btn btn-success rounded-pill w-100 py-2 fw-semibold hover-lift">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="me-1"><rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/></svg>
-                    Pay Online
-                </button>
+                    {{-- Pay Online Button --}}
+                    <button id="pay-btn" class="btn btn-success rounded-pill w-100 py-2 fw-semibold hover-lift">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="me-1"><rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/></svg>
+                        Pay Online
+                    </button>
+                @endif
             </div>
 
             {{-- Trust Badge --}}
@@ -202,14 +251,38 @@
 
 </div>
 
-{{-- Loading Overlay --}}
-<!-- <div id="cart-ajax-loader" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.7); z-index: 9999;"> -->
-    <!-- <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);">
-        <div class="spinner-border text-primary" role="status">
-            <span class="visually-hidden">Loading...</span>
-        </div> -->
-    <!-- </div>
-</div> -->
+{{-- Prescription Upload Modal (Hidden by default) --}}
+<div class="modal fade" id="prescriptionModal" tabindex="-1" aria-labelledby="prescriptionModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 rounded-4 shadow">
+            <div class="modal-header border-0 px-4 pt-4">
+                <h5 class="modal-title fw-bold" id="prescriptionModalLabel">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="me-2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>
+                    Upload Prescription
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body px-4 pb-4">
+                <form id="prescription-upload-form" enctype="multipart/form-data">
+                    @csrf
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Select Prescription File</label>
+                        <input type="file" name="prescription" class="form-control rounded-3" accept=".jpg,.jpeg,.png,.pdf" required>
+                        <small class="text-muted">Supported formats: JPG, PNG, PDF (Max 5MB)</small>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Notes (Optional)</label>
+                        <textarea name="notes" class="form-control rounded-3" rows="2" placeholder="Any additional information..."></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary rounded-pill w-100 py-2 fw-semibold">
+                        <span class="spinner-border spinner-border-sm d-none me-1" role="status" aria-hidden="true"></span>
+                        Submit Prescription
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
 
 @endsection
 
@@ -226,6 +299,7 @@
     const csrf = document.querySelector('meta[name="csrf-token"]')?.content;
     const UPDATE_URL = "{{ route('cart.update') }}";
     const REMOVE_BASE_URL = "{{ url('cart/remove') }}";
+    const REQUIRES_PRESCRIPTION = {{ $requiresPrescription ? 'true' : 'false' }};
     
     // DOM Elements
     const loader = document.getElementById('cart-ajax-loader');
@@ -306,7 +380,7 @@
         const formData = new FormData();
         formData.append('cart_id', cartId);
         formData.append('qty', newQty);
-        formData.append('_token', csrf);
+        // formData.append('_token', csrf);
         
         try {
             const response = await fetch(UPDATE_URL, {
@@ -319,8 +393,16 @@
                 body: formData
             });
             
-            const data = await response.json();
-            
+const text = await response.text();
+console.log("SERVER RESPONSE:", text);
+
+let data;
+try {
+    data = JSON.parse(text);
+} catch {
+    alert("Server error - check console");
+    return;
+}            
             // Handle both response formats: {status: true} or {success: true}
             const isSuccess = data.status === true || data.success === true;
             
@@ -379,60 +461,65 @@
     }
     
     // AJAX Remove Item
-async function removeCartItem(cartId) {
-
-    showLoader();
-
-    setButtonsState(cartId, true);
-
-    try {
-        const response = await fetch(`${REMOVE_BASE_URL}/${cartId}`, {
-            method: 'GET',
-            headers: {
-                'X-CSRF-TOKEN': csrf,
-                'X-Requested-With': 'XMLHttpRequest',
-                'Accept': 'application/json'
+    async function removeCartItem(cartId) {
+        showLoader();
+        setButtonsState(cartId, true);
+        
+        try {
+            const response = await fetch(`${REMOVE_BASE_URL}/${cartId}`, {
+                method: 'GET',
+                headers: {
+                    'X-CSRF-TOKEN': csrf,
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Accept': 'application/json'
+                }
+            });
+            
+            const data = await response.json();
+            
+            const isSuccess = data.status === true || data.success === true;
+            
+            if (isSuccess) {
+                const row = document.querySelector(`.cart-item-row[data-id="${cartId}"]`);
+                if (row) {
+                    row.classList.add('removing');
+                    row.style.transition = 'opacity 0.3s ease';
+                    row.style.opacity = '0';
+                    
+                    setTimeout(() => {
+                        row.remove();
+                        
+                        let newSubtotal = 0;
+                        document.querySelectorAll('.cart-item-row:not(.removing)').forEach(r => {
+                            const rowPrice = parseFloat(r.dataset.price);
+                            const rowQty = parseInt(r.querySelector('.qty-value')?.textContent || 0);
+                            newSubtotal += rowPrice * rowQty;
+                        });
+                        
+                        updateCartSummary(newSubtotal);
+                        updateCartCount();
+                        checkEmptyState();
+                        
+                        // Reload page if prescription requirement changed
+                        if (REQUIRES_PRESCRIPTION) {
+                            setTimeout(() => {
+                                window.location.reload();
+                            }, 500);
+                        }
+                    }, 300);
+                }
+            } else {
+                alert(data.message || 'Failed to remove item');
+                setButtonsState(cartId, false);
             }
-        });
-
-        const data = await response.json();
-
-        const isSuccess = data.status === true || data.success === true;
-
-        if (isSuccess) {
-            const row = document.querySelector(`.cart-item-row[data-id="${cartId}"]`);
-            if (row) {
-                row.classList.add('removing');
-                row.style.transition = 'opacity 0.3s ease';
-                row.style.opacity = '0';
-
-                setTimeout(() => {
-                    row.remove();
-
-                    let newSubtotal = 0;
-                    document.querySelectorAll('.cart-item-row:not(.removing)').forEach(r => {
-                        const rowPrice = parseFloat(r.dataset.price);
-                        const rowQty = parseInt(r.querySelector('.qty-value')?.textContent || 0);
-                        newSubtotal += rowPrice * rowQty;
-                    });
-
-                    updateCartSummary(newSubtotal);
-                    updateCartCount();
-                    checkEmptyState();
-                }, 300);
-            }
-        } else {
-            alert(data.message || 'Failed to remove item');
+        } catch (error) {
+            console.error('Error removing item:', error);
+            alert('Something went wrong. Please try again.');
             setButtonsState(cartId, false);
+        } finally {
+            hideLoader();
         }
-    } catch (error) {
-        console.error('Error removing item:', error);
-        alert('Something went wrong. Please try again.');
-        setButtonsState(cartId, false);
-    } finally {
-        hideLoader();
     }
-}
     
     // Event Delegation for all cart interactions
     document.addEventListener('click', function(e) {
@@ -474,6 +561,95 @@ async function removeCartItem(cartId) {
             removeCartItem(cartId);
         }
     });
+    
+    // ===============================
+    // PRESCRIPTION UPLOAD HANDLER
+    // ===============================
+    const uploadBtn = document.getElementById('upload-prescription-btn');
+    const prescriptionModal = document.getElementById('prescriptionModal');
+    
+    if (uploadBtn && prescriptionModal) {
+        uploadBtn.addEventListener('click', function() {
+            const addressId = document.getElementById('address_id').value;
+            
+            if (!addressId || addressId === "" || addressId === "null") {
+                alert("⚠️ Please select a valid address first");
+                return;
+            }
+            
+            const modal = new bootstrap.Modal(prescriptionModal);
+            modal.show();
+        });
+        
+        // Handle prescription form submission
+        const prescriptionForm = document.getElementById('prescription-upload-form');
+        if (prescriptionForm) {
+            prescriptionForm.addEventListener('submit', async function(e) {
+                e.preventDefault();
+                
+                const addressId = document.getElementById('address_id').value;
+                const fileInput = this.querySelector('input[type="file"]');
+                const notesInput = this.querySelector('textarea[name="notes"]');
+                const submitBtn = this.querySelector('button[type="submit"]');
+                const spinner = submitBtn.querySelector('.spinner-border');
+                
+                if (!fileInput.files[0]) {
+                    alert('Please select a prescription file');
+                    return;
+                }
+                
+                // Show loading state
+                submitBtn.disabled = true;
+                spinner.classList.remove('d-none');
+                
+                const formData = new FormData();
+                formData.append('prescription', fileInput.files[0]);
+                formData.append('notes', notesInput.value);
+                formData.append('address_id', addressId);
+                formData.append('_token', csrf);
+                
+              try {
+    const response = await fetch(API_BASE + '/prescription/upload', {
+        method: 'POST',
+        headers: {
+            'Authorization': 'Bearer ' + token,
+            'Accept': 'application/json'
+        },
+        body: formData
+    });
+
+    const data = await response.json();
+
+ if (data.status || data.success) {
+
+    let prescriptionId = data.data.id; // 🔥 IMPORTANT
+
+    // Save ID
+    localStorage.setItem('prescription_id', prescriptionId);
+
+    bootstrap.Modal.getInstance(prescriptionModal).hide();
+
+    alert("Prescription uploaded successfully");
+
+    // Enable Pay button
+    let payBtn = document.getElementById('pay-btn');
+    if (payBtn) {
+        payBtn.disabled = false;
+        payBtn.style.opacity = 1;
+        payBtn.style.cursor = 'pointer';
+    }
+
+    } else {
+        alert(data.message || 'Upload failed');
+    }
+
+} catch (error) {
+    console.error('Upload error:', error);
+    alert('Something went wrong. Please try again.');
+}
+});
+}
+    }
     
     // ===============================
     // LOAD ADDRESSES (KEEP EXACTLY SAME)
@@ -536,12 +712,18 @@ async function removeCartItem(cartId) {
     // ONLINE PAYMENT (RAZORPAY) - KEEP EXACTLY SAME
     // ===============================
     document.getElementById('pay-btn')?.addEventListener('click', function() {
-      let addressId = document.getElementById('address_id').value;
-
-if (!addressId || addressId === "" || addressId === "null") {
-    alert("⚠️ Please select a valid address");
-    return;
-}
+        // Don't proceed if button is disabled
+        if (this.disabled) {
+            alert("⚠️ Please upload prescription first");
+            return;
+        }
+        
+        let addressId = document.getElementById('address_id').value;
+        
+        if (!addressId || addressId === "" || addressId === "null") {
+            alert("⚠️ Please select a valid address");
+            return;
+        }
         
         // Get current total from summary
         const totalText = document.getElementById('summary-total')?.textContent || '0';
@@ -573,30 +755,40 @@ if (!addressId || addressId === "" || addressId === "null") {
                     formData.append('address_id', addressId);
                     formData.append('payment_id', response.razorpay_payment_id);
                     formData.append('payment_mode', 'razorpay');
-                    
-                    fetch('/orders/place', {
-                        method: 'POST',
-                        headers: { 'X-CSRF-TOKEN': csrf },
-                        body: formData
-                    })
+let prescriptionId = localStorage.getItem('prescription_id');
+
+if (!prescriptionId || prescriptionId === "null") {
+    alert("⚠️ Please upload prescription again");
+    return;
+}
+
+formData.append('prescription_id', prescriptionId);
+                    fetch(API_BASE + '/orders/place', {
+    method: 'POST',
+    headers: {
+        'Authorization': 'Bearer ' + token,
+        'Accept': 'application/json'
+    },
+    body: formData
+})
                     .then(res => res.json())
                     .then(data => {
                         if (data.status) {
-                        Swal.fire({
-    icon: 'success',
-    title: 'Order Placed!',
-    text: 'Your order has been placed successfully 🎉',
-    timer: 2000,
-    showConfirmButton: false
-});
-
-// cart count reset
-const navbarCart = document.querySelector('#cart-count, .cart-count');
-if (navbarCart) navbarCart.innerText = 0;
-
-setTimeout(() => {
-    window.location.href = "/orders";
-}, 2000);
+                            Swal.fire({
+                                icon: 'success',
+                                title: 'Order Placed!',
+                                text: 'Your order has been placed successfully 🎉',
+                                timer: 2000,
+                                showConfirmButton: false
+                            });
+                            
+                            // cart count reset
+                            const navbarCart = document.querySelector('#cart-count, .cart-count');
+                            if (navbarCart) navbarCart.innerText = 0;
+                            
+                            setTimeout(() => {
+                                window.location.href = "/orders";
+                            }, 2000);
                         } else {
                             alert("❌ Order failed: " + data.message);
                         }

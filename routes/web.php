@@ -38,7 +38,7 @@ Route::post('/cart/add', [CartController::class, 'addToCart'])->name('cart.add')
 Route::post('/cart/update', [CartController::class, 'update'])->name('cart.update');
 Route::get('/cart/remove/{id}', [CartController::class, 'remove'])->name('cart.remove');
 Route::get('/cart/clear', [CartController::class, 'clear'])->name('cart.clear');
-
+Route::post('/prescription/upload', [PrescriptionController::class, 'upload']);
 Route::post('/payment/verify', [PaymentController::class, 'verify'])->name('payment.verify');
 Route::get('/orders', [OrderController::class, 'index'])->name('orders');
 Route::get('/orders/{id}', [OrderController::class, 'show'])->name('orders.show');

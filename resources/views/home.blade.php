@@ -333,18 +333,17 @@
                 <div class="col-md-6 col-lg-4 col-xl-3 product-card" style="animation-delay: {{ $index * 0.05 }}s">
                     <div class="bg-white rounded-4 shadow-sm h-100 d-flex flex-column">
                         <div class="product-image-wrapper position-relative rounded-top-4">
-                            @if(isset($product['image']) && $product['image'])
-                                <img src="{{ $product['image'] }}" 
-                                     class="product-image w-100" 
-                                     alt="{{ $product['name'] }}" 
-                                     style="height: 220px; object-fit: cover;">
-                            @else
-                                <div class="bg-gradient-to-br from-gray-100 to-gray-200 text-center py-5" style="height: 220px;">
-                                    <i class="fas fa-capsules fa-5x text-muted"></i>
-                                    <p class="mt-2 text-muted small">No Image</p>
-                                </div>
-                            @endif
-                            
+                           @php
+    $image = (!empty($product['image']) && filter_var($product['image'], FILTER_VALIDATE_URL))
+        ? $product['image']
+        : asset('images/default-medicine.png');
+@endphp
+
+<img src="{{ $image }}"
+     class="product-image w-100"
+     alt="{{ $product['name'] }}"
+     style="height: 220px; object-fit: cover;"
+     onerror="this.onerror=null;this.src='{{ asset('images/default-medicine.png') }}';">
                             @if(isset($product['discount']) && $product['discount'] > 0)
                                 <div class="discount-badge position-absolute top-0 start-0 m-3">
                                     <span class="badge bg-danger rounded-pill px-3 py-2 shadow-sm">
@@ -404,36 +403,19 @@
                             </div>
                             
                             <div class="mt-auto">
-                                <!-- <div class="d-flex gap-2">
+                                <div class="d-flex gap-2">
                                     <a href="{{ route('product.show', $product['id']) }}" 
                                        class="btn btn-outline-success flex-grow-1 rounded-pill">
                                         <i class="fas fa-eye me-1"></i> View
                                     </a>
-                                 <button 
-    class="add-to-cart-btn btn btn-success w-100 rounded-pill position-relative overflow-hidden"
-    data-id="{{ $product['batch_id'] }}">
-
-    <i class="fas fa-cart-plus me-1"></i> Add
-</button>
-                                </div> -->
-                                <div class="d-flex gap-2">
-    
-    <!-- VIEW BUTTON -->
-    <a href="{{ route('product.show', $product['id']) }}" 
-       class="btn btn-outline-success w-50 rounded-pill d-flex align-items-center justify-content-center gap-1">
-        <i class="fas fa-eye"></i>
-        <span>View</span>
-    </a>
-
-    <!-- ADD BUTTON -->
-    <button 
-        class="add-to-cart-btn btn btn-success w-50 rounded-pill d-flex align-items-center justify-content-center gap-1"
-        data-id="{{ $product['batch_id'] }}">
-        <i class="fas fa-cart-plus"></i>
-        <span>Add</span>
-    </button>
-
-</div>
+                                    <form action="{{ route('cart.add') }}" method="POST" class="flex-grow-1">
+                                        @csrf
+<input type="hidden" name="batch_id" value="{{ $product['batch_id'] }}">                                        <input type="hidden" name="qty" value="1">
+                                        <button type="submit" class="add-to-cart-btn btn btn-success w-100 rounded-pill position-relative overflow-hidden">
+                                            <i class="fas fa-cart-plus me-1"></i> Add
+                                        </button>
+                                    </form>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -547,102 +529,64 @@
 @push('scripts')
 <script>
     // Add to cart animation
-   // ADD TO CART
-document.querySelectorAll('.add-to-cart-btn').forEach(btn => {
-
-    btn.addEventListener('click', function (e) {
-
-        e.preventDefault();
-
-        let batchId = this.getAttribute('data-id');
-        let button = this;
-
-        fetch("{{ route('cart.add') }}", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "X-CSRF-TOKEN": document.querySelector('meta[name="csrf-token"]').content
-            },
-            body: JSON.stringify({
-                batch_id: batchId,
-                qty: 1
-            })
-        })
-        .then(res => {
-
-            if (res.status === 401 || res.status === 419) {
-                window.location.href = "/login?redirect=" + window.location.pathname;
-                return;
-            }
-
-            return res.json();
-        })
-        .then(data => {
-
-            if (!data) return;
-
-            updateCartCount();
-
-            button.innerHTML = "✔ Added";
-            button.classList.remove("btn-success");
-            button.classList.add("btn-warning");
-
-            showToast("Added to cart 🛒", "success");
-
-            setTimeout(() => {
-                button.innerHTML = '<i class="fas fa-cart-plus me-1"></i> Add';
-                button.classList.remove("btn-warning");
-                button.classList.add("btn-success");
-            }, 2000);
-
-        })
-        .catch(err => {
-            console.error(err);
+    document.querySelectorAll('.add-to-cart-btn').forEach(btn => {
+        btn.addEventListener('click', function(e) {
+            // Show ripple effect
+            const ripple = document.createElement('span');
+            ripple.style.position = 'absolute';
+            ripple.style.borderRadius = '50%';
+            ripple.style.backgroundColor = 'rgba(255,255,255,0.6)';
+            ripple.style.transform = 'scale(0)';
+            ripple.style.animation = 'ripple 0.6s linear';
+            this.appendChild(ripple);
+            
+            setTimeout(() => ripple.remove(), 600);
         });
-
     });
-
-}); // ✅ VERY IMPORTANT (missing tha)
-
-// =========================
-// ✅ FUNCTION OUTSIDE
-// =========================
-function updateCartCount() {
-
-    fetch("{{ env('API_BASE_URL') }}/cart", {
-        headers: {
-            "Authorization": "Bearer {{ session('user_token') }}"
-        }
-    })
-    .then(res => {
-
-        if (res.status === 401) {
-            window.location.href = "/login";
-            return;
-        }
-
-        return res.json();
-    })
-    .then(cart => {
-
-        if (!cart) return;
-
-        let count = cart.items 
-            ? cart.items.reduce((sum, item) => sum + item.qty, 0) 
-            : 0;
-
-        let el = document.getElementById("cart-count");
-
-        if (!el) return;
-
-        if (count > 0) {
-            el.style.display = "flex";
-            el.textContent = count;
-        } else {
-            el.style.display = "none";
-        }
+    
+    // Wishlist functionality
+    document.querySelectorAll('.wishlist-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const icon = this.querySelector('i');
+            if (icon.classList.contains('far')) {
+                icon.classList.remove('far');
+                icon.classList.add('fas');
+                icon.style.color = '#ef4444';
+                // Show toast message
+                showToast('Added to wishlist!', 'success');
+            } else {
+                icon.classList.remove('fas');
+                icon.classList.add('far');
+                icon.style.color = '';
+                showToast('Removed from wishlist', 'info');
+            }
+        });
     });
-}
+    
+    // Toast notification function
+    function showToast(message, type) {
+        const toast = document.createElement('div');
+        toast.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
+        toast.style.bottom = '20px';
+        toast.style.right = '20px';
+        toast.style.zIndex = '9999';
+        toast.style.minWidth = '250px';
+        toast.innerHTML = `
+            <i class="fas fa-${type === 'success' ? 'check-circle' : 'info-circle'} me-2"></i>
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
+        document.body.appendChild(toast);
+        setTimeout(() => toast.remove(), 3000);
+    }
+    
+    // Category filter animation
+    document.querySelectorAll('.category-card').forEach(card => {
+        card.addEventListener('click', function() {
+            const category = this.querySelector('h6').innerText;
+            showToast(`Filtering by ${category}`, 'info');
+        });
+    });
 </script>
 @endpush
 @endsection
