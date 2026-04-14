@@ -133,7 +133,10 @@ public function show($id)
             $payload = [
                 'address_id'   => $request->address_id,
                 'payment_id'   => $request->payment_id,
-                'payment_mode' => $request->payment_mode
+                'payment_mode' => $request->payment_mode,
+
+                    'prescription_id' => $request->prescription_id
+
             ];
 
             $response = $this->apiPost('/orders/place', $payload);

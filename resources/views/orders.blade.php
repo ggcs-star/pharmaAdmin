@@ -168,15 +168,29 @@
                     @foreach($order['items'] as $item)
                         <div class="d-flex flex-column flex-sm-row gap-3 border-bottom pb-3 mb-3 item-row">
                             <div class="flex-shrink-0">
-                                <img src="{{ 
-                                    !empty($item['item']['main_image']) 
-                                        ? $s3Base.'/'.$item['item']['main_image']
-                                        : asset('no-image.png') 
-                                }}" 
-                                     class="rounded-3 border"
-                                     style="width: 100px; height: 100px; object-fit: cover;"
-                                     alt="{{ $item['product']['name'] ?? 'Item' }}"
-                                     onerror="this.src='{{ asset('no-image.png') }}'">
+                             
+  @php
+    $img = $item['item']['main_image'] ?? null;
+
+    if (!empty($img)) {
+        // अगर full URL है
+        if (filter_var($img, FILTER_VALIDATE_URL)) {
+            $image = $img;
+        } 
+        // अगर सिर्फ path है
+        else {
+            $image = "https://pharma-catalog-assets.s3.us-east-1.amazonaws.com/".$img;
+        }
+    } else {
+        $image = asset('images/default-medicine.png');
+    }
+@endphp
+
+<img src="{{ $image }}"
+     class="rounded-3 border"
+     style="width: 100px; height: 100px; object-fit: cover;"
+     alt="{{ $item['product']['name'] ?? 'Item' }}"
+     onerror="this.onerror=null;this.src='{{ asset('images/default-medicine.png') }}';">
                             </div>
                             <div class="flex-grow-1">
                                 <div class="d-flex flex-wrap justify-content-between align-items-start">

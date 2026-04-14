@@ -530,13 +530,9 @@ if (count > 0) {
 }     } else {
             // agar pehle badge nahi tha
             let cartIcon = document.querySelector('.nav-item.position-relative');
-         let count = parseInt(data.cart_count) || 0;
-
-if (count > 0) {
-    cartIcon.insertAdjacentHTML('beforeend',
-        `<span class="cart-badge" id="cart-count">${count}</span>`
-    );
-}
+            cartIcon.insertAdjacentHTML('beforeend',
+                `<span class="cart-badge" id="cart-count">${data.cart_count}</span>`
+            );
         }
     });
 }

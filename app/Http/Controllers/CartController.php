@@ -118,25 +118,33 @@ public function __construct()
             session(['cart_count' => $count]);
 
             // ✅ RETURN JSON (VERY IMPORTANT FOR AJAX)
-            return response()->json([
-                'success' => true,
-                'cart_count' => $count,
-                'message' => 'Added to cart'
-            ]);
-        }
+if ($request->expectsJson()) {
+    return response()->json([
+        'success' => true,
+        'cart_count' => $count,
+        'message' => 'Added to cart'
+    ]);
+}
 
-        return response()->json([
-            'success' => false,
-            'message' => 'Failed to add'
-        ], 400);
+return redirect()->back()->with('success', 'Added to cart');        }
+if ($request->expectsJson()) {
+    return response()->json([
+        'success' => false,
+        'message' => 'Failed to add'
+    ], 400);
+}
 
+return redirect()->back()->with('error', 'Failed to add');
     } catch (\Exception $e) {
 
-        return response()->json([
-            'success' => false,
-            'message' => 'Cart service error'
-        ], 500);
-    }
+if ($request->expectsJson()) {
+    return response()->json([
+        'success' => false,
+        'message' => 'Cart service error'
+    ], 500);
+}
+
+return redirect()->back()->with('error', 'Cart service error');    }
 }
     /* ===============================
         UPDATE CART
@@ -233,24 +241,83 @@ public function remove($id)
     /* ===============================
         PLACE ORDER
     =============================== */
+    // public function placeOrder()
+    // {
+    //     try {
+    //         $response = Http::withToken(session('user_token'))
+    //             ->timeout(10)
+    //             ->post($this->apiBaseUrl . '/orders/place');
+
+    //         if ($response->successful()) {
+    //             session(['cart_count' => 0]);
+    //             return redirect()->route('orders')->with('success', 'Order placed');
+    //         }
+
+    //         return redirect()->route('cart')->with('error', 'Order failed');
+
+    //     } catch (\Exception $e) {
+    //         return redirect()->route('cart')->with('error', 'Order error');
+    //     }
+    // }
     public function placeOrder()
-    {
-        try {
-            $response = Http::withToken(session('user_token'))
-                ->timeout(10)
-                ->post($this->apiBaseUrl . '/orders/place');
+{
+    try {
 
-            if ($response->successful()) {
-                session(['cart_count' => 0]);
-                return redirect()->route('orders')->with('success', 'Order placed');
-            }
+        // 🔥 STEP 1: GET CART FIRST
+        $cartResponse = Http::withToken(session('user_token'))
+            ->get($this->apiBaseUrl . '/cart');
 
-            return redirect()->route('cart')->with('error', 'Order failed');
-
-        } catch (\Exception $e) {
-            return redirect()->route('cart')->with('error', 'Order error');
+        if (!$cartResponse->successful()) {
+            return redirect()->route('cart')->with('error', 'Unable to verify cart');
         }
+
+        $cartData = $cartResponse->json();
+
+        // 🔥 STEP 2: CHECK RX ITEMS
+        $hasRx = collect($cartData['items'] ?? [])->contains(function ($item) {
+            return isset($item['need_prescription']) && $item['need_prescription'] == 1;
+        });
+// 🔥 STEP 3: CHECK PRESCRIPTION FROM API
+// 🔥 GET LATEST PRESCRIPTION ID
+$prescriptionId = null;
+
+$prescriptionList = Http::withToken(session('user_token'))
+    ->get($this->apiBaseUrl . '/prescription/my');
+
+if ($prescriptionList->successful()) {
+    $list = $prescriptionList->json()['data'] ?? [];
+
+    if (!empty($list)) {
+$latest = collect($list)->sortByDesc('id')->first();
+        $prescriptionId = $latest['id'] ?? null;
     }
+}
+
+// 🔥 FINAL CONDITION
+if ($hasRx && !$prescriptionId) {
+        return redirect()->route('cart')
+
+        ->with('error', 'Please upload prescription before placing order');
+}
+
+        $response = Http::withToken(session('user_token'))
+    ->post($this->apiBaseUrl . '/orders/place', [
+'payment_mode' => 'razorpay',
+'payment_id' => $request->payment_id ?? 'manual', // ya pass from frontend        'address_id' => session('selected_address_id'), // ensure set
+        'prescription_id' => $prescriptionId // 🔥 IMPORTANT
+    ]);
+
+        if ($response->successful()) {
+            session(['cart_count' => 0]);
+            return redirect()->route('orders')->with('success', 'Order placed');
+        }
+
+        return redirect()->route('cart')->with('error', 'Order failed');
+
+    } catch (\Exception $e) {
+        return redirect()->route('cart')->with('error', 'Order error');
+    }
+}
 
     /* ===============================
         HELPER: REFRESH CART COUNT
