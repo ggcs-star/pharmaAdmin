@@ -78,12 +78,10 @@ public function __construct()
   public function addToCart(Request $request)
 {
     // ✅ LOGIN CHECK (IMPORTANT FIX)
-    if (!session('user_token')) {
-        return response()->json([
-            'status' => false,
-            'message' => 'Unauthenticated'
-        ], 401);
-    }
+if (!session('user_token')) {
+    return redirect()->route('login')
+        ->with('error', 'Please login first');
+}
 
     // ✅ VALIDATION
     $request->validate([

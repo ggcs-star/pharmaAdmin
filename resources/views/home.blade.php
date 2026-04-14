@@ -311,14 +311,14 @@
                 <h2 class="display-5 fw-bold mb-0">Popular Products</h2>
                 <p class="text-muted mt-2">Most trusted medicines and health products</p>
             </div>
-            <div>
+            <!-- <div>
                 <div class="btn-group" role="group">
                     <button class="btn btn-outline-teal active">All</button>
                     <button class="btn btn-outline-teal">Medicines</button>
                     <button class="btn btn-outline-teal">Healthcare</button>
                     <button class="btn btn-outline-teal">Wellness</button>
                 </div>
-            </div>
+            </div> -->
         </div>
         
         @if(empty($products))
@@ -424,11 +424,11 @@
             </div>
             
             <!-- Load More Button -->
-            <div class="text-center mt-5">
+            <!-- <div class="text-center mt-5">
                 <button class="btn btn-outline-teal btn-lg px-5 rounded-pill hover-scale">
                     Load More Products <i class="fas fa-arrow-down ms-2"></i>
                 </button>
-            </div>
+            </div> -->
         @endif
     </div>
 </section>

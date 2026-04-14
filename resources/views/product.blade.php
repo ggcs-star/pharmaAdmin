@@ -19,17 +19,13 @@
                 {{-- Left Column - Image --}}
                 <div class="col-md-5">
                     <div class="product-image-wrapper bg-light rounded-4 p-4 d-flex align-items-center justify-content-center">
-                        @if(isset($product['image']))
-                            <img src="{{ $product['image'] }}" 
-                                 class="img-fluid product-image" 
-                                 alt="{{ $product['name'] }}" 
-                                 style="width: 100%; height: 400px; object-fit: contain;">
-                        @else
-                            <div class="text-center py-5 w-100">
-                                <i class="fas fa-capsules fa-8x text-secondary opacity-50"></i>
-                                <p class="text-muted mt-3 mb-0">Image not available</p>
-                            </div>
-                        @endif
+                      <img 
+    src="{{ !empty($product['image']) ? $product['image'] : asset('images/default-product.png') }}" 
+    class="img-fluid product-image" 
+    alt="{{ $product['name'] }}"
+    style="width: 100%; height: 400px; object-fit: contain;"
+    onerror="this.onerror=null;this.src='{{ asset('images/default-medicine.png') }}';"
+>
                     </div>
                 </div>
                 
