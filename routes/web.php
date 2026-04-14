@@ -15,6 +15,8 @@ use App\Http\Controllers\PaymentController;
 |--------------------------------------------------------------------------
 */
 
+Route::get('/profile', [OrderController::class, 'profile'])->name('profile');
+
 // Public Routes
 Route::get('/', [HomeController::class, 'index'])->name('home');
 Route::get('/product/{id}', [ProductController::class, 'show'])->name('product.show');
