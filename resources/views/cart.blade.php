@@ -64,11 +64,27 @@
                                         <div class="d-flex align-items-center gap-3">
 
     {{-- IMAGE --}}
-    @php
-        $image = (!empty($item['main_image']) && filter_var($item['main_image'], FILTER_VALIDATE_URL))
-            ? $item['main_image']
-            : asset('images/default-medicine.png');
-    @endphp
+@php
+$image = asset('images/default-medicine.png');
+
+if (!empty($item['main_image'])) {
+
+    if (filter_var($item['main_image'], FILTER_VALIDATE_URL)) {
+
+        // External URL
+        $image = $item['main_image'];
+
+    } else {
+
+        try {
+            // S3 image
+            $image = Storage::disk('s3')->url($item['main_image']);
+        } catch (\Exception $e) {
+            $image = asset('images/default-medicine.png');
+        }
+    }
+}
+@endphp
 
     <img src="{{ $image }}"
          class="rounded-3 border"

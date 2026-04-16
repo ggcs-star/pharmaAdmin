@@ -333,10 +333,20 @@
                 <div class="col-md-6 col-lg-4 col-xl-3 product-card" style="animation-delay: {{ $index * 0.05 }}s">
                     <div class="bg-white rounded-4 shadow-sm h-100 d-flex flex-column">
                         <div class="product-image-wrapper position-relative rounded-top-4">
-                           @php
-    $image = (!empty($product['image']) && filter_var($product['image'], FILTER_VALIDATE_URL))
-        ? $product['image']
-        : asset('images/default-medicine.png');
+                          @php
+$image = asset('images/default-medicine.png');
+
+if (!empty($product['main_image'])) {
+
+    if (filter_var($product['main_image'], FILTER_VALIDATE_URL)) {
+        // External URL
+        $image = $product['main_image'];
+
+    } else {
+        // S3 path
+        $image = Storage::disk('s3')->url($product['image']);
+    }
+}
 @endphp
 
 <img src="{{ $image }}"

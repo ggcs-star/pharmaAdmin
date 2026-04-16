@@ -79,6 +79,14 @@ public function __construct()
 {
     // ✅ LOGIN CHECK (IMPORTANT FIX)
 if (!session('user_token')) {
+
+    if ($request->expectsJson()) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Please login first'
+        ], 401);
+    }
+
     return redirect()->route('login')
         ->with('error', 'Please login first');
 }

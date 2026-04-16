@@ -19,12 +19,28 @@
                 {{-- Left Column - Image --}}
                 <div class="col-md-5">
                     <div class="product-image-wrapper bg-light rounded-4 p-4 d-flex align-items-center justify-content-center">
-                      <img 
-    src="{{ !empty($product['image']) ? $product['image'] : asset('images/default-product.png') }}" 
+                        @php
+$image = asset('images/default-medicine.png');
+
+if (!empty($product['main_image'])) {
+
+    if (filter_var($product['main_image'], FILTER_VALIDATE_URL)) {
+        // External URL (Excel import)
+        $image = $product['main_image'];
+
+    } else {
+        // S3 uploaded image
+        $image = Storage::disk('s3')->url($product['main_image']);
+    }
+}
+@endphp
+      <img 
+    src="{{ $image }}" 
     class="img-fluid product-image" 
     alt="{{ $product['name'] }}"
     style="width: 100%; height: 400px; object-fit: contain;"
     onerror="this.onerror=null;this.src='{{ asset('images/default-medicine.png') }}';"
+>
 >
                     </div>
                 </div>
@@ -92,7 +108,7 @@
                     {{-- Action Buttons --}}
                     <form action="{{ route('cart.add') }}" method="POST">
                         @csrf
-                        <input type="hidden" name="batch_id" value="{{ $product['id'] }}">
+<input type="hidden" name="batch_id" value="{{ $product['batch_id'] }}">
                         <input type="hidden" name="qty" value="1">
                         
                         <div class="d-flex gap-3 flex-wrap flex-sm-nowrap">
@@ -100,7 +116,7 @@
                                 <i class="fas fa-cart-plus me-2"></i>Add to Cart
                             </button>
                            <button type="button" 
-        onclick="buyNow({{ $product['id'] }})"
+onclick="buyNow({{ $product['batch_id'] }})"
         class="btn btn-outline-success btn-lg px-4 shadow-sm">
     <i class="fas fa-bolt me-2"></i>Buy Now
 </button>
@@ -266,7 +282,7 @@ function buyNow(batchId) {
     .then(data => {
 
         if (data.success) {
-            // 🔥 redirect to cart page
+            // 🔥 direct checkout page pe redirect
             window.location.href = "/cart";
         } else {
             alert(data.message || 'Something went wrong');
@@ -275,7 +291,7 @@ function buyNow(batchId) {
     })
     .catch(err => {
         console.log(err);
-        alert('Error occurred');
+        alert('Please Login to continue');
     });
 }
 </script>
