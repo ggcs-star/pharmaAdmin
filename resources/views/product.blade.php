@@ -19,18 +19,25 @@
                 {{-- Left Column - Image --}}
                 <div class="col-md-5">
                     <div class="product-image-wrapper bg-light rounded-4 p-4 d-flex align-items-center justify-content-center">
-                        @php
+       @php
 $image = asset('images/default-medicine.png');
 
 if (!empty($product['main_image'])) {
 
     if (filter_var($product['main_image'], FILTER_VALIDATE_URL)) {
+
         // External URL (Excel import)
         $image = $product['main_image'];
 
+    } elseif (str_starts_with($product['main_image'], 'items/')) {
+
+        // Old S3 images
+        $image = 'https://pharma-catalog-assets.s3.us-east-1.amazonaws.com/' . $product['main_image'];
+
     } else {
-        // S3 uploaded image
-$image = Storage::url($product['main_image']);
+
+        // Local storage images
+        $image = Storage::url($product['main_image']);
     }
 }
 @endphp
