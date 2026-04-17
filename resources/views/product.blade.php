@@ -30,7 +30,7 @@ if (!empty($product['main_image'])) {
 
     } else {
         // S3 uploaded image
-        $image = Storage::disk('s3')->url($product['main_image']);
+$image = Storage::url($product['main_image']);
     }
 }
 @endphp
