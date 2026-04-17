@@ -71,17 +71,15 @@ if (!empty($item['main_image'])) {
 
     if (filter_var($item['main_image'], FILTER_VALIDATE_URL)) {
 
-        // External URL
         $image = $item['main_image'];
+
+    } elseif (str_starts_with($item['main_image'], 'items/')) {
+
+        $image = 'https://pharma-catalog-assets.s3.us-east-1.amazonaws.com/' . $item['main_image'];
 
     } else {
 
-        try {
-            // S3 image
-$image = Storage::url($item['main_image']);
-        } catch (\Exception $e) {
-            $image = asset('images/default-medicine.png');
-        }
+        $image = Storage::url($item['main_image']);
     }
 }
 @endphp
