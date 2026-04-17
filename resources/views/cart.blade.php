@@ -78,7 +78,7 @@ if (!empty($item['main_image'])) {
 
         try {
             // S3 image
-            $image = Storage::disk('s3')->url($item['main_image']);
+$image = Storage::url($item['main_image']);
         } catch (\Exception $e) {
             $image = asset('images/default-medicine.png');
         }

@@ -344,8 +344,7 @@ if (!empty($product['main_image'])) {
 
     } else {
         // S3 path
-        $image = Storage::disk('s3')->url($product['image']);
-    }
+$image = Storage::url($product['main_image']);    }
 }
 @endphp
 
