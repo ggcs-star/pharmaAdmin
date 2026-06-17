@@ -94,6 +94,11 @@
 const API_BASE_URL = "{{ env('API_BASE_URL', 'http://127.0.0.1:8000/api') }}";
 const token = document.querySelector('meta[name="api-token"]')?.getAttribute('content') || '';
 
+const deviceId = localStorage.getItem('device_id');
+
+console.log('TOKEN:', token);
+console.log('DEVICE ID:', deviceId);
+
 // Ensure API_BASE_URL doesn't have trailing slash
 const BASE_URL = API_BASE_URL.replace(/\/$/, '');
 
@@ -124,10 +129,11 @@ function loadAddresses() {
     $.ajax({
         url: url,
         method: "GET",
-        headers: {
-            Authorization: "Bearer " + token,
-            Accept: "application/json"
-        },
+      headers: {
+    Authorization: "Bearer " + token,
+    "X-Device-ID": deviceId,
+    Accept: "application/json"
+},
         success: function(res) {
             console.log('Addresses loaded:', res);
             $("#address-list").html("");
@@ -221,11 +227,12 @@ function saveAddress() {
     $.ajax({
         url: url,
         method: method,
-        headers: {
-            Authorization: "Bearer " + token,
-            "Content-Type": "application/json",
-            Accept: "application/json"
-        },
+      headers: {
+    Authorization: "Bearer " + token,
+    "X-Device-ID": deviceId,
+    "Content-Type": "application/json",
+    Accept: "application/json"
+},
         data: JSON.stringify(data),
         success: function(res) {
             alert(res.message || "Address saved successfully");
@@ -248,10 +255,11 @@ function deleteAddress(id) {
     $.ajax({
         url: url,
         method: "DELETE",
-        headers: {
-            Authorization: "Bearer " + token,
-            Accept: "application/json"
-        },
+      headers: {
+    Authorization: "Bearer " + token,
+    "X-Device-ID": deviceId,
+    Accept: "application/json"
+},
         success: function(res) {
             alert(res.message);
             loadAddresses();
@@ -270,10 +278,11 @@ function setDefault(id) {
     $.ajax({
         url: url,
         method: "POST",
-        headers: {
-            Authorization: "Bearer " + token,
-            Accept: "application/json"
-        },
+    headers: {
+    Authorization: "Bearer " + token,
+    "X-Device-ID": deviceId,
+    Accept: "application/json"
+},
         success: function(res) {
             alert(res.message);
             loadAddresses();

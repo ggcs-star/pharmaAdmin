@@ -7,226 +7,900 @@ use Illuminate\Support\Facades\Log;
 
 class AuthController extends BaseController
 {
-    /* ===============================
-        SINGLE AUTH PAGE
-    =============================== */
+    /*
+    |--------------------------------------------------------------------------
+    | AUTH PAGE
+    |--------------------------------------------------------------------------
+    */
+
     public function index()
     {
-return view('login');    }
+        return view('auth.login-register');
+    }
 
-    /* ===============================
-        LOGIN
-    =============================== */
+    /*
+    |--------------------------------------------------------------------------
+    | LOGIN
+    |--------------------------------------------------------------------------
+    */
+
     public function login(Request $request)
     {
         $request->validate([
+
             'email' => 'required|email',
+
             'password' => 'required|min:6'
         ]);
 
-        Log::info('Login Attempt', ['email' => $request->email]);
-
         try {
-            $response = $this->apiPost('/user/login', [
-                'email' => $request->email,
-                'password' => $request->password
+
+            /*
+            |--------------------------------------------------------------------------
+            | DEVICE ID
+            |--------------------------------------------------------------------------
+            */
+
+            $deviceId =
+                $request->header(
+                    'X-Device-ID'
+                );
+
+            /*
+            |--------------------------------------------------------------------------
+            | LOGIN API
+            |--------------------------------------------------------------------------
+            */
+
+            $response = $this->apiPost(
+
+                '/user/login',
+
+                [
+
+                    'email' =>
+                        $request->email,
+
+                    'password' =>
+                        $request->password
+                ],
+
+                [
+
+                    'X-Device-ID' =>
+                        $deviceId
+                ]
+            );
+
+            Log::info('LOGIN API RESPONSE', [
+
+                'status' =>
+                    $response->status(),
+
+                'body' =>
+                    $response->body()
             ]);
 
-            Log::info('Login API Response', [
-                'status' => $response->status(),
-                'body' => $response->body()
-            ]);
+            $data =
+                $response->json();
 
-            if ($response->successful()) {
+            /*
+            |--------------------------------------------------------------------------
+            | LOGIN SUCCESS
+            |--------------------------------------------------------------------------
+            */
 
-                $data = $response->json();
+            if (
+                $response->successful()
+            ) {
 
-                if (!isset($data['token'])) {
-                    return back()->with('error', 'Invalid login response');
+                /*
+                |--------------------------------------------------------------------------
+                | TOKEN CHECK
+                |--------------------------------------------------------------------------
+                */
+
+                if (
+                    !isset($data['token'])
+                ) {
+
+                    return response()->json([
+
+                        'success' => false,
+
+                        'message' =>
+                            'Invalid login response'
+
+                    ], 500);
                 }
 
-                // ✅ Session store
+                /*
+                |--------------------------------------------------------------------------
+                | SESSION STORE
+                |--------------------------------------------------------------------------
+                */
+
                 session([
-                    'user_token' => $data['token'],
-                    'user_email' => $data['user']['email'] ?? '',
-                    'user_name'  => $data['user']['name'] ?? ''
-                ]);
+    'user_token' => $data['token'],
+    'user_email' => $data['user']['email'] ?? '',
+    'user_name'  => $data['user']['name'] ?? '',
+    'device_id'  => $deviceId
+]);
+session()->save();
 
-                // ✅ Cart fetch (optional but recommended)
+Log::info('LOGIN SESSION SAVED', [
+    'device_id' => session('device_id'),
+    'token' => session('user_token')
+]);
+                /*
+                |--------------------------------------------------------------------------
+                | CART COUNT
+                |--------------------------------------------------------------------------
+                */
+
                 try {
-                    $cartResponse = $this->apiGet('/cart');
 
-                    if ($cartResponse->successful()) {
-                        $cart = $cartResponse->json();
-                        session(['cart_count' => count($cart['items'] ?? [])]);
+                    $cartResponse =
+                        $this->apiGet(
+                            '/cart'
+                        );
+
+                    if (
+                        $cartResponse
+                            ->successful()
+                    ) {
+
+                        $cart =
+                            $cartResponse
+                            ->json();
+
+                        session([
+
+                            'cart_count' =>
+                                count(
+                                    $cart['items']
+                                    ?? []
+                                )
+                        ]);
+
                     } else {
-                        session(['cart_count' => 0]);
+
+                        session([
+                            'cart_count' => 0
+                        ]);
                     }
+
                 } catch (\Exception $e) {
-                    session(['cart_count' => 0]);
+
+                    session([
+                        'cart_count' => 0
+                    ]);
                 }
 
-                return redirect()->route('home')->with('success', 'Login successful');
-            }
+                /*
+                |--------------------------------------------------------------------------
+                | RESPONSE
+                |--------------------------------------------------------------------------
+                */
 
-            $data = $response->json();
+                return response()->json([
 
-            if ($response->status() == 401) {
-                return back()->with('error', $data['message'] ?? 'Invalid credentials');
-            }
+                    'success' => true,
 
-            if ($response->status() == 403) {
-                return back()->with([
-                    'error' => $data['message'] ?? 'Email not verified',
-                    'show_otp' => true,
-                    'email' => $request->email
+                    'message' =>
+                        'Login successful',
+
+                    'token' =>
+                        $data['token'],
+
+                    'user' =>
+                        $data['user'],
+
+                    'trusted_device' =>
+                        $data['trusted_device']
+                        ?? false,
+
+                    'device_verification_required' =>
+                        $data['device_verification_required']
+                        ?? false
                 ]);
             }
 
-            if ($response->status() == 404) {
-                return back()->with('error', $data['message'] ?? 'User not found');
-            }
+            /*
+            |--------------------------------------------------------------------------
+            | LOGIN FAILED
+            |--------------------------------------------------------------------------
+            */
 
-            return back()->with('error', $data['message'] ?? 'Login failed');
+            return response()->json([
+
+                'success' => false,
+
+                'message' =>
+                    $data['message']
+                    ?? 'Login failed'
+
+            ], $response->status());
 
         } catch (\Exception $e) {
 
-            Log::error('Login Exception', [
-                'message' => $e->getMessage()
+            Log::error('LOGIN EXCEPTION', [
+
+                'message' =>
+                    $e->getMessage()
             ]);
 
-            return back()->with('error', 'Server error, try again');
+            return response()->json([
+
+                'success' => false,
+
+                'message' =>
+                    'Server error, try again'
+
+            ], 500);
         }
     }
 
-    /* ===============================
-        REGISTER (SEND OTP)
-    =============================== */
+    /*
+    |--------------------------------------------------------------------------
+    | REGISTER
+    |--------------------------------------------------------------------------
+    */
+
     public function register(Request $request)
     {
         $request->validate([
-            'name' => 'required|string|max:255',
-            'email' => 'required|email',
-            'password' => 'required|min:6|confirmed'
+
+            'name' =>
+                'required|string|max:255',
+
+            'email' =>
+                'required|email',
+
+            'password' =>
+                'required|min:6|confirmed'
         ]);
+        
 
         try {
-            $response = $this->apiPost('/user/register', [
-                'name' => $request->name,
-                'email' => $request->email,
-                'password' => $request->password,
-                'password_confirmation' => $request->password_confirmation
+
+            $deviceId =
+                $request->header(
+                    'X-Device-ID'
+                );
+
+            /*
+            |--------------------------------------------------------------------------
+            | REGISTER API
+            |--------------------------------------------------------------------------
+            */
+
+           $response = $this->apiPost(
+    '/user/register',
+    [
+        'name' => $request->name,
+        'email' => $request->email,
+        'password' => $request->password,
+        'password_confirmation' => $request->password_confirmation,
+        'device_id' => $deviceId
+    ],
+    [
+        'X-Device-ID' => $deviceId
+    ]
+);
+
+            Log::info('REGISTER API RESPONSE', [
+
+                'status' =>
+                    $response->status(),
+
+                'body' =>
+                    $response->body()
             ]);
 
-            Log::info('Register API Response', [
-                'status' => $response->status(),
-                'body' => $response->body()
-            ]);
+            $data =
+                $response->json();
 
-            if ($response->successful()) {
-                return back()->with([
-                    'success' => 'OTP sent to your email',
-                    'show_otp' => true,
-                    'email' => $request->email
+            if (
+                $response->successful()
+            ) {
+
+                return response()->json([
+
+                    'success' => true,
+
+                    'message' =>
+                        'OTP sent successfully'
                 ]);
             }
 
-            $data = $response->json();
+            return response()->json([
 
-            return back()->with('error', $data['message'] ?? 'Registration failed');
+                'success' => false,
+
+                'message' =>
+                    $data['message']
+                    ?? 'Registration failed'
+
+            ], $response->status());
 
         } catch (\Exception $e) {
 
-            Log::error('Register Exception', [
-                'message' => $e->getMessage()
+            Log::error('REGISTER EXCEPTION', [
+
+                'message' =>
+                    $e->getMessage()
             ]);
 
-            return back()->with('error', 'Server error, try again');
+            return response()->json([
+
+                'success' => false,
+
+                'message' =>
+                    'Server error, try again'
+
+            ], 500);
         }
     }
 
-    /* ===============================
-        VERIFY OTP
-    =============================== */
+    /*
+    |--------------------------------------------------------------------------
+    | VERIFY EMAIL OTP
+    |--------------------------------------------------------------------------
+    */
+
     public function verifyOtp(Request $request)
     {
         $request->validate([
-            'email' => 'required|email',
-            'otp' => 'required'
+
+            'email' =>
+                'required|email',
+
+            'otp' =>
+                'required'
         ]);
 
         try {
-            $response = $this->apiPost('/user/verify-email-otp', [
-                'email' => $request->email,
-                'otp' => $request->otp
-            ]);
 
-            if ($response->successful()) {
-                return back()->with('success', 'Email verified! Now login');
+            $deviceId =
+                $request->header(
+                    'X-Device-ID'
+                );
+
+$response = $this->apiPost(
+    '/user/verify-email-otp',
+    [
+        'email' => $request->email,
+        'otp' => $request->otp,
+        'device_id' => $deviceId
+    ],
+    [
+        'X-Device-ID' => $deviceId
+    ]
+);
+            $data =
+                $response->json();
+
+            if (
+                $response->successful()
+            ) {
+
+               session([
+    'user_token' => $data['token'] ?? '',
+    'user_email' => $data['user']['email'] ?? $request->email,
+    'user_name'  => $data['user']['name'] ?? 'User',
+    'device_id'  => $deviceId
+]);
+
+                return response()->json([
+
+                    'success' => true,
+
+                    'message' =>
+                        'OTP verified successfully'
+                ]);
             }
 
-            $data = $response->json();
+            return response()->json([
 
-            return back()->with([
-                'error' => $data['message'] ?? 'Invalid OTP',
-                'show_otp' => true,
-                'email' => $request->email
-            ]);
+                'success' => false,
+
+                'message' =>
+                    $data['message']
+                    ?? 'Invalid OTP'
+
+            ], 422);
 
         } catch (\Exception $e) {
-            return back()->with('error', 'OTP verification failed');
+
+            Log::error('VERIFY OTP EXCEPTION', [
+
+                'message' =>
+                    $e->getMessage()
+            ]);
+
+            return response()->json([
+
+                'success' => false,
+
+                'message' =>
+                    'OTP verification failed'
+
+            ], 500);
         }
     }
 
-    /* ===============================
-        RESEND OTP
-    =============================== */
-    public function resendOtp(Request $request)
-    {
+    /*
+    |--------------------------------------------------------------------------
+    | VERIFY DEVICE OTP
+    |--------------------------------------------------------------------------
+    */
+
+    public function verifyDeviceOtp(
+        Request $request
+    ) {
+
+        try {
+
+            $deviceId =
+                $request->header(
+                    'X-Device-ID'
+                );
+
+            $response = $this->apiPost(
+
+                '/device/verify-otp',
+
+                [
+
+                    'otp' =>
+                        $request->otp
+                ],
+
+                [
+
+                    'Authorization' =>
+                        'Bearer ' .
+                        session('user_token'),
+
+                    'X-Device-ID' =>
+                        $deviceId
+                ]
+            );
+
+            $data =
+                $response->json();
+
+            return response()->json(
+                $data,
+                $response->status()
+            );
+
+        } catch (\Exception $e) {
+
+            Log::error('VERIFY DEVICE OTP', [
+
+                'message' =>
+                    $e->getMessage()
+            ]);
+
+            return response()->json([
+
+                'success' => false,
+
+                'message' =>
+                    'Device verification failed'
+
+            ], 500);
+        }
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | RESEND OTP
+    |--------------------------------------------------------------------------
+    */
+public function checkAuth(Request $request)
+{
+    $token = session('user_token');
+
+    return response()->json([
+        'status' => !empty($token),
+        'authenticated' => !empty($token),
+        'user' => !empty($token) ? [
+            'name' => session('user_name'),
+            'email' => session('user_email')
+        ] : null
+    ]);
+}
+    public function resendOtp(
+        Request $request
+    ) {
+
         $request->validate([
-            'email' => 'required|email'
+
+            'email' =>
+                'required|email'
         ]);
 
         try {
-            $this->apiPost('/user/resend-email-otp', [
-                'email' => $request->email
-            ]);
 
-            return back()->with([
-                'success' => 'OTP resent successfully',
-                'show_otp' => true,
-                'email' => $request->email
-            ]);
+            $response = $this->apiPost(
+
+                '/user/resend-email-otp',
+
+                [
+
+                    'email' =>
+                        $request->email
+                ]
+            );
+
+            $data =
+                $response->json();
+
+            if (
+                $response->successful()
+            ) {
+
+                return response()->json([
+
+                    'success' => true,
+
+                    'message' =>
+                        'OTP resent successfully'
+                ]);
+            }
+
+            return response()->json([
+
+                'success' => false,
+
+                'message' =>
+                    $data['message']
+                    ?? 'Failed to resend OTP'
+
+            ], $response->status());
 
         } catch (\Exception $e) {
-            return back()->with('error', 'Failed to resend OTP');
+
+            Log::error('RESEND OTP EXCEPTION', [
+
+                'message' =>
+                    $e->getMessage()
+            ]);
+
+            return response()->json([
+
+                'success' => false,
+
+                'message' =>
+                    'Failed to resend OTP'
+
+            ], 500);
         }
     }
-    public function forgotPassword(Request $request)
-{
-    $response = $this->apiPost('/user/forgot-password', [
-        'email' => $request->email
-    ]);
 
-    if ($response->successful()) {
-        return back()->with('success', 'Reset link sent');
+    /*
+    |--------------------------------------------------------------------------
+    | FORGOT PASSWORD
+    |--------------------------------------------------------------------------
+    */
+
+    public function forgotPassword(
+        Request $request
+    ) {
+
+        try {
+
+            $response = $this->apiPost(
+
+                '/user/forgot-password',
+
+                [
+
+                    'email' =>
+                        $request->email
+                ]
+            );
+
+            $data =
+                $response->json();
+
+            if (
+                $response->successful()
+            ) {
+
+                return response()->json([
+
+                    'success' => true,
+
+                    'message' =>
+                        'Reset OTP sent successfully'
+                ]);
+            }
+
+            return response()->json([
+
+                'success' => false,
+
+                'message' =>
+                    $data['message']
+                    ?? 'Failed to send reset OTP'
+
+            ], $response->status());
+
+        } catch (\Exception $e) {
+
+            Log::error('FORGOT PASSWORD EXCEPTION', [
+
+                'message' =>
+                    $e->getMessage()
+            ]);
+
+            return response()->json([
+
+                'success' => false,
+
+                'message' =>
+                    'Server error'
+
+            ], 500);
+        }
     }
 
-    return back()->with('error', 'Failed to send reset link');
-}
+    /*
+    |--------------------------------------------------------------------------
+    | GOOGLE LOGIN
+    |--------------------------------------------------------------------------
+    */
 
-    /* ===============================
-        LOGOUT
-    =============================== */
+    public function googleLogin(
+        Request $request
+    ) {
+
+        $token =
+            $request->token;
+
+        if (!$token) {
+
+            return response()->json([
+
+                'success' => false,
+
+                'message' =>
+                    'Google login failed'
+
+            ], 401);
+        }
+
+        session([
+            'user_token' => $token
+        ]);
+
+        return response()->json([
+
+            'success' => true,
+
+            'message' =>
+                'Google login successful'
+        ]);
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | LOGOUT
+    |--------------------------------------------------------------------------
+    */
+
     public function logout()
     {
         session()->forget([
+
             'user_token',
+
             'user_email',
+
             'user_name',
+
             'cart_count'
         ]);
 
-        return redirect()->route('home')->with('success', 'Logged out successfully');
+        return response()->json([
+
+            'success' => true,
+
+            'message' =>
+                'Logged out successfully'
+        ]);
     }
-}
+
+
+ 
+    /*
+|--------------------------------------------------------------------------
+| SEND DEVICE OTP
+|--------------------------------------------------------------------------
+*/
+
+public function sendDeviceOtp(
+    Request $request
+) {
+
+    try {
+
+        /*
+        |--------------------------------------------------------------------------
+        | TOKEN
+        |--------------------------------------------------------------------------
+        */
+
+        $token =
+            session('user_token');
+
+        /*
+        |--------------------------------------------------------------------------
+        | FALLBACK TOKEN
+        |--------------------------------------------------------------------------
+        */
+
+        if (!$token) {
+
+            $authHeader =
+                $request->header(
+                    'Authorization'
+                );
+
+            if (
+                $authHeader &&
+                str_starts_with(
+                    $authHeader,
+                    'Bearer '
+                )
+            ) {
+
+                $token =
+                    str_replace(
+                        'Bearer ',
+                        '',
+                        $authHeader
+                    );
+            }
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | DEVICE ID
+        |--------------------------------------------------------------------------
+        */
+
+        $deviceId =
+            $request->header(
+                'X-Device-ID'
+            );
+
+        /*
+        |--------------------------------------------------------------------------
+        | DEBUG LOG
+        |--------------------------------------------------------------------------
+        */
+
+        Log::info(
+            'SEND DEVICE OTP DEBUG',
+            [
+
+                'session_token' =>
+                    session('user_token'),
+
+                'final_token' =>
+                    $token,
+
+                'device_id' =>
+                    $deviceId,
+
+                'authorization_header' =>
+                    $request->header(
+                        'Authorization'
+                    )
+            ]
+        );
+
+        /*
+        |--------------------------------------------------------------------------
+        | VALIDATION
+        |--------------------------------------------------------------------------
+        */
+
+        if (!$token) {
+
+            return response()->json([
+
+                'success' => false,
+
+                'message' =>
+                    'Authentication token missing'
+
+            ], 401);
+        }
+
+        if (!$deviceId) {
+
+            return response()->json([
+
+                'success' => false,
+
+                'message' =>
+                    'Device ID missing'
+
+            ], 400);
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | API REQUEST
+        |--------------------------------------------------------------------------
+        */
+
+        $response = $this->apiPost(
+
+            '/device/send-otp',
+
+            [],
+
+            [
+
+                'Authorization' =>
+                    'Bearer ' . $token,
+
+                'X-Device-ID' =>
+                    $deviceId
+            ]
+        );
+
+        /*
+        |--------------------------------------------------------------------------
+        | RESPONSE LOG
+        |--------------------------------------------------------------------------
+        */
+
+        Log::info(
+            'DEVICE OTP API RESPONSE',
+            [
+
+                'status' =>
+                    $response->status(),
+
+                'body' =>
+                    $response->body()
+            ]
+        );
+
+        return response()->json(
+            $response->json(),
+            $response->status()
+        );
+
+    } catch (\Exception $e) {
+
+        Log::error(
+            'SEND DEVICE OTP ERROR',
+            [
+
+                'message' =>
+                    $e->getMessage()
+            ]
+        );
+
+        return response()->json([
+
+            'success' => false,
+
+            'message' =>
+                'Unable to send device OTP',
+
+            'error' =>
+                $e->getMessage()
+
+        ], 500);
+    }
+}}

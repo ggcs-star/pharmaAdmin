@@ -5,622 +5,684 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <meta name="api-token" content="{{ session('user_token') }}">
-    <title>@yield('title', 'MediLife - Your Trusted Online Pharmacy')</title>
-    
-    <!-- Bootstrap 5 CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    
-    <!-- Font Awesome Icons -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    
-    <!-- Google Fonts -->
+    <title>@yield('title','Rapid Retail Pharmacy')</title>
+
+    <!-- Bootstrap -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+
+    <!-- Google Font -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    
+
     <style>
         * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
             font-family: 'Inter', sans-serif;
         }
-        
+
         body {
-            background-color: #f8f9fa;
+            background: #f6f6f6;
+            overflow-x: hidden;
+            color: #212121;
         }
-        
-        .navbar-brand {
-            font-weight: 800;
-            font-size: 1.5rem;
+
+        a {
+            text-decoration: none;
         }
-        
-        .hero-gradient {
-            background: linear-gradient(135deg, #0d9488 0%, #14b8a6 50%, #2dd4bf 100%);
+
+        .container-fluid {
+            padding-left: 32px !important;
+            padding-right: 32px !important;
         }
-        
-        .product-card {
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
-            border-radius: 16px;
-            overflow: hidden;
+
+        .main-header {
+            background: #fff;
+            position: sticky;
+            top: 0;
+            z-index: 99999;
+            border-bottom: 1px solid #ececec;
         }
-        
-        .product-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.02);
+
+        .top-navbar {
+            height: 80px;
+            border-bottom: 1px solid #ececec;
+            display: flex;
+            align-items: center;
+            background: #fff;
         }
-        
-        .category-card {
-            transition: all 0.3s ease;
-            cursor: pointer;
+
+        .top-navbar-inner {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            width: 100%;
         }
-        
-        .category-card:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+
+        .top-left-menu {
+            display: flex;
+            align-items: center;
+            gap: 22px;
         }
-        
-        .btn-primary-custom {
-            background-color: #0d9488;
-            border-color: #0d9488;
+
+       .logo-link {
+    margin-right: 15px;
+    display: flex;
+    align-items: center;
+    min-width: 200px;
+}
+
+.main-logo {
+    height: 70px;
+    width: auto;
+    object-fit: contain;
+    display: block;
+}
+
+        .top-left-menu a {
+            color: #212121;
+            font-size: 14px;
+            font-weight: 600;
+            position: relative;
+            padding-bottom: 20px;
+            white-space: nowrap;
         }
-        
-        .btn-primary-custom:hover {
-            background-color: #0f766e;
-            border-color: #0f766e;
+
+        .top-left-menu a.active-menu {
+            color: #ff6f61;
         }
-        
+
+        .top-left-menu a.active-menu::after {
+            content: '';
+            position: absolute;
+            left: 0;
+            bottom: 0;
+            width: 100%;
+            height: 3px;
+            background: #ff6f61;
+        }
+
+        .save-more-badge {
+            background: #ff6f61;
+            color: #fff;
+            font-size: 10px;
+            font-weight: 700;
+            padding: 2px 6px;
+            border-radius: 3px;
+        }
+
+        .top-right-menu {
+            display: flex;
+            align-items: center;
+            gap: 22px;
+        }
+
+        .top-right-menu a {
+            color: #212121;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .cart-link {
+            position: relative;
+            color: #212121 !important;
+            font-size: 22px !important;
+        }
+
         .cart-badge {
             position: absolute;
-            top: -8px;
-            right: -8px;
-            background-color: #ef4444;
-            color: white;
-            border-radius: 50%;
-            width: 18px;
+            top: -6px;
+            right: -10px;
+            min-width: 18px;
             height: 18px;
+            border-radius: 50%;
+            background: #ff6b6b;
+            color: #fff;
             font-size: 10px;
+            font-weight: 700;
             display: flex;
             align-items: center;
             justify-content: center;
+            padding: 0 5px;
         }
-        
-        .alert-fixed {
-            position: fixed;
-            top: 80px;
-            right: 20px;
-            z-index: 9999;
-            min-width: 300px;
-            animation: slideInRight 0.3s ease;
-        }
-        
-        @keyframes slideInRight {
-            from {
-                transform: translateX(100%);
-                opacity: 0;
-            }
-            to {
-                transform: translateX(0);
-                opacity: 1;
-            }
-        }
-        
-        .quantity-input {
-            width: 60px;
-            text-align: center;
-        }
-        
-        .cart-item-image {
-            width: 80px;
-            height: 80px;
-            object-fit: cover;
-            border-radius: 12px;
-        }
-        
-        /* Footer Styles */
-        .footer {
-            background: linear-gradient(135deg, #1a202c 0%, #2d3748 100%);
-            position: relative;
-            overflow: hidden;
-        }
-        
-        .footer::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 4px;
-            background: linear-gradient(90deg, #0d9488, #14b8a6, #2dd4bf);
-        }
-        
-        .footer-logo {
-            font-size: 1.8rem;
-            font-weight: 800;
-        }
-        
-        .social-icon {
-            width: 36px;
-            height: 36px;
-            display: inline-flex;
+
+        .profile-btn {
+            width: 38px;
+            height: 38px;
+            border: none;
+            border-radius: 50%;
+            background: #fff3f1;
+            color: #ff6f61;
+            font-size: 16px;
+            display: flex;
             align-items: center;
             justify-content: center;
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 50%;
-            transition: all 0.3s ease;
-            color: #cbd5e0;
+            transition: 0.2s;
         }
-        
-        .social-icon:hover {
-            background: #0d9488;
-            color: white;
-            transform: translateY(-3px);
+
+        .profile-btn:hover {
+            background: #ffebe8;
         }
-        
-        .footer-link {
-            color: #cbd5e0;
-            text-decoration: none;
-            transition: all 0.3s ease;
-            display: inline-block;
+
+        .dropdown-menu {
+            border: none;
+            border-radius: 12px;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
+            padding: 10px;
         }
-        
-        .footer-link:hover {
-            color: #2dd4bf;
-            transform: translateX(5px);
+
+        .dropdown-item {
+            border-radius: 8px;
+            padding: 10px 14px;
+            font-size: 14px;
         }
-        
-        .contact-item {
+
+        .dropdown-item:hover {
+            background: #f5f5f5;
+        }
+
+        .search-navbar {
+            height: 60px;
+            border-bottom: 1px solid #ececec;
+            background: #fff;
+            display: flex;
+            align-items: center;
+        }
+
+        .search-navbar-inner {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            width: 100%;
+        }
+
+        .location-box {
+            width: 250px;
+            height: 42px;
+            background: #f3f4f6;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            padding: 0 14px;
+            gap: 10px;
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .location-target {
+            margin-left: auto;
+            color: #777;
+        }
+
+        .search-wrapper {
+            flex: 1;
+            position: relative;
+        }
+
+        .search-input {
+            width: 100%;
+            height: 42px;
+            border: 1px solid #ddd;
+            background: #f8f8f8;
+            border-radius: 6px;
+            padding: 0 50px 0 18px;
+            outline: none;
+            font-size: 14px;
+        }
+
+        .search-input:focus {
+            background: #fff;
+            border-color: #ff6f61;
+        }
+
+        .search-btn {
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 48px;
+            height: 42px;
+            border: none;
+            background: none;
+            color: #666;
+        }
+
+        .quick-order-wrapper {
             display: flex;
             align-items: center;
             gap: 12px;
-            margin-bottom: 12px;
-            color: #cbd5e0;
         }
-        
-        .contact-icon {
-            width: 35px;
-            height: 35px;
-            background: rgba(13, 148, 136, 0.2);
-            border-radius: 50%;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            color: #2dd4bf;
+
+        .quick-order-wrapper span {
+            font-size: 14px;
+            font-weight: 500;
+            white-space: nowrap;
         }
-        
-        .newsletter-input {
-            background: rgba(255, 255, 255, 0.1);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            color: white;
-            border-radius: 50px;
-            padding: 12px 20px;
-        }
-        
-        .newsletter-input:focus {
-            background: rgba(255, 255, 255, 0.15);
-            border-color: #0d9488;
-            outline: none;
-            box-shadow: none;
-            color: white;
-        }
-        
-        .newsletter-input::placeholder {
-            color: #94a3b8;
-        }
-        
-        .btn-newsletter {
-            background: #0d9488;
+
+        .quick-order-wrapper button {
+            height: 42px;
             border: none;
-            border-radius: 50px;
-            padding: 12px 28px;
-            font-weight: 600;
-            transition: all 0.3s ease;
+            background: #ff6f61;
+            color: #fff;
+            border-radius: 6px;
+            padding: 0 20px;
+            font-size: 14px;
+            font-weight: 700;
         }
-        
-        .btn-newsletter:hover {
-            background: #0f766e;
-            transform: translateY(-2px);
+
+        .category-navbar {
+            height: 42px;
+            border-bottom: 1px solid #ececec;
+            background: #fff;
         }
-        
-        .payment-icons i {
-            font-size: 32px;
-            color: #cbd5e0;
-            transition: all 0.3s ease;
-        }
-        
-        .payment-icons i:hover {
-            color: #2dd4bf;
-            transform: translateY(-2px);
-        }
-        
-        .footer-bottom {
-            border-top: 1px solid rgba(255, 255, 255, 0.1);
-            padding-top: 20px;
-        }
-        
-        .scroll-top {
-            position: fixed;
-            bottom: 30px;
-            right: 30px;
-            width: 45px;
-            height: 45px;
-            background: #0d9488;
-            border-radius: 50%;
+
+        .category-scroll {
+            height: 42px;
             display: flex;
             align-items: center;
-            justify-content: center;
-            color: white;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            z-index: 1000;
-            opacity: 0;
-            visibility: hidden;
+            gap: 28px;
+            overflow-x: auto;
+        }
+
+        .category-scroll::-webkit-scrollbar {
+            display: none;
+        }
+
+        .category-scroll a {
+            color: #3d3d3d;
+            font-size: 14px;
+            white-space: nowrap;
+        }
+
+        main {
+            min-height: 70vh;
+        }
+
+        .footer {
+            background: #fff;
+            margin-top: 50px;
+            border-top: 1px solid #ececec;
+            padding: 50px 0 20px;
+        }
+
+        .footer-logo {
+            height: 32px;
+            width: auto;
+        }
+
+        .footer-text {
+            margin-top: 14px;
+            color: #666;
+            line-height: 1.8;
+            font-size: 14px;
+        }
+
+        .footer-title {
+            font-size: 16px;
+            font-weight: 700;
+            margin-bottom: 16px;
+        }
+
+        .footer-links {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .footer-links a {
+            color: #666;
+            font-size: 14px;
+        }
+
+        .footer-bottom {
+            margin-top: 35px;
+            border-top: 1px solid #ececec;
+            padding-top: 18px;
+            text-align: center;
+            color: #777;
+            font-size: 13px;
+        }
+
+        @media (max-width: 991px) {
+            .top-navbar {
+                height: auto;
+                padding: 12px 0;
+            }
+            .top-navbar-inner {
+                flex-direction: column;
+                gap: 14px;
+                align-items: flex-start;
+            }
+            .top-left-menu {
+                overflow-x: auto;
+                width: 100%;
+            }
+            .top-right-menu {
+                width: 100%;
+                justify-content: flex-end;
+            }
+            .search-navbar {
+                height: auto;
+                padding: 14px 0;
+            }
+            .search-navbar-inner {
+                flex-direction: column;
+            }
+            .location-box {
+                width: 100%;
+            }
+            .quick-order-wrapper {
+                width: 100%;
+                justify-content: space-between;
+            }
+        }
+
+        @media (max-width: 576px) {
+            .container-fluid {
+                padding-left: 14px !important;
+                padding-right: 14px !important;
+            }
+            .quick-order-wrapper {
+                display: none;
+            }
+            .top-left-menu {
+                gap: 16px;
+            }
+        }
+
+        .user-greeting {
+            font-size: 14px;
+            font-weight: 600;
+            color: #212121;
+            background: #fff3f1;
+            padding: 6px 14px;
+            border-radius: 30px;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .user-greeting i {
+            color: #ff6f61;
+        }
+
+        .login-link {
+            color: #ff6f61 !important;
+            font-weight: 600 !important;
         }
         
-        .scroll-top.show {
-            opacity: 1;
-            visibility: visible;
-        }
-        
-        .scroll-top:hover {
-            background: #0f766e;
-            transform: translateY(-3px);
-        }
-        
-        @media (max-width: 768px) {
-            .footer {
-                text-align: center;
-            }
-            
-            .contact-item {
-                justify-content: center;
-            }
-            
-            .social-icons {
-                justify-content: center;
-            }
-        }
     </style>
-    
-    @stack('styles')
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 </head>
+
 <body>
-    
-    <!-- Header -->
-    <nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm sticky-top">
-        <div class="container">
-            <a class="navbar-brand text-teal-700" href="{{ route('home') }}">
-                <i class="fas fa-tablets text-teal-600 me-2"></i>
-                Pharma<span class="text-teal-500">Labs</span>
-            </a>
-            
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarContent">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            
-            <div class="collapse navbar-collapse" id="navbarContent">
-                <!-- Search Bar -->
-                <form class="d-flex mx-auto w-50" role="search" method="GET" action="{{ route('home') }}">
-                    <div class="input-group">
-                        <input class="form-control" type="search" placeholder="Search for medicines, health products..." name="search">
-                        <button class="btn btn-success" type="submit">
-                            <i class="fas fa-search"></i>
-                        </button>
+    <header class="main-header">
+        <div class="top-navbar">
+            <div class="container-fluid">
+                <div class="top-navbar-inner">
+                    <div class="top-left-menu">
+                        <a href="{{ route('home') }}" class="logo-link">
+                            <img src="{{ asset('images/mediquick-logo.png') }}" alt="MediQuick" class="main-logo">
+                        </a>
+                        <a href="#" class="active-menu">MEDICINES</a>
+                        <a href="#">LAB TESTS</a>
+                        <a href="#">CONSULT DOCTORS</a>
+                        <a href="#">AYURVEDA</a>
+                        <a href="#">CARE PLAN</a>
+                        <span class="save-more-badge">SAVE MORE</span>
                     </div>
-                </form>
-                
-                <!-- Right Menu -->
-                <ul class="navbar-nav ms-auto mb-2 mb-lg-0">
-                    @if(session('user_token'))
-                        <li class="nav-item dropdown">
-                            <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
-                                <i class="fas fa-user-circle me-1"></i>
-                                {{ session('user_name', 'Account') }}
+
+                    <div class="top-right-menu">
+                        <a href="#">Offers</a>
+                        <a href="{{ route('cart') }}" class="cart-link">
+                            <i class="fa-solid fa-cart-shopping"></i>
+                            <span class="cart-badge" id="cart-count">{{ session('cart_count', 0) }}</span>
+                        </a>
+
+                        @if(session()->has('user_token'))
+                            <div class="dropdown">
+                                <button class="profile-btn" data-bs-toggle="dropdown">
+                                    <i class="fa-regular fa-user"></i>
+                                </button>
+                                <ul class="dropdown-menu dropdown-menu-end">
+                                    <li><a class="dropdown-item" href="#"><i class="fa-regular fa-user me-2"></i>{{ session('user_name') }}</a></li>
+                                    <li><a class="dropdown-item" href="{{ route('orders') }}"><i class="fa-solid fa-box me-2"></i>My Orders</a></li>
+                                    <li><a class="dropdown-item" href="#"><i class="fa-solid fa-heart me-2"></i>Wishlist</a></li>
+                                    <li><hr class="dropdown-divider"></li>
+                                <li>
+    <button type="button" id="logoutBtn" class="dropdown-item text-danger">
+        <i class="fa-solid fa-right-from-bracket me-2"></i>Logout
+    </button>
+</li>
+                                </ul>
+                            </div>
+                        @else
+                            <a href="{{ route('login') }}" class="login-link">
+                                <i class="fa-regular fa-circle-user"></i> Login / Signup
                             </a>
-                            <ul class="dropdown-menu dropdown-menu-end">
-                                <li><a class="dropdown-item" href="{{ route('orders') }}"><i class="fas fa-box me-2"></i>My Orders</a></li>
-                                <li><hr class="dropdown-divider"></li>
-                                <li><a class="dropdown-item text-danger" href="{{ route('logout') }}"><i class="fas fa-sign-out-alt me-2"></i>Logout</a></li>
-                            </ul>
-                        </li>
-                    @else
-                        <li class="nav-item">
-                            <a class="nav-link" href="{{ route('login') }}">
-                                <i class="fas fa-sign-in-alt me-1"></i> Login
-                            </a>
-                        </li>
-                    @endif
-                    
-                    <li class="nav-item position-relative">
-                        <a class="nav-link" href="{{ route('cart') }}">
-                            <i class="fas fa-shopping-cart"></i> Cart
-    <span class="cart-badge" id="cart-count" style="display:none;">
-    0
-</span>
-                       </a>
-                    </li>
-                </ul>
+                        @endif
+                    </div>
+                </div>
             </div>
         </div>
-    </nav>
-    
-    <!-- Alert Messages -->
-    @if(session('success'))
-        <div class="alert alert-success alert-dismissible fade show alert-fixed" role="alert">
-            <i class="fas fa-check-circle me-2"></i> {{ session('success') }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+
+        <div class="search-navbar">
+            <div class="container-fluid">
+                <div class="search-navbar-inner">
+                    <div class="location-box">
+                        <i class="fa-solid fa-location-dot"></i>
+                        <span>Ahmedabad</span>
+                        <i class="fa-solid fa-crosshairs location-target"></i>
+                    </div>
+                    <div class="search-wrapper">
+                        <form action="#" method="GET">
+                            <input type="text" name="q" class="search-input" placeholder="Search for medicines and healthcare products">
+                            <button type="submit" class="search-btn"><i class="fa-solid fa-magnifying-glass"></i></button>
+                        </form>
+                    </div>
+                    <div class="quick-order-wrapper">
+                        <span>⚡ Get medicines delivered in 30 minutes</span>
+                        <button>Quick Order</button>
+                    </div>
+                </div>
+            </div>
         </div>
-    @endif
-    
-    @if(session('error'))
-        <div class="alert alert-danger alert-dismissible fade show alert-fixed" role="alert">
-            <i class="fas fa-exclamation-circle me-2"></i> {{ session('error') }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+
+        <div class="category-navbar">
+            <div class="container-fluid">
+                <div class="category-scroll">
+                    @if(isset($categories) && count($categories))
+                        @foreach($categories as $category)
+                            <a href="{{ url('/category/' . ($category['slug'] ?? $category['id'])) }}">
+                                {{ $category['name'] ?? '' }}
+                            </a>
+                        @endforeach
+                    @endif
+                </div>
+            </div>
         </div>
-    @endif
-    
-    <!-- Main Content -->
+    </header>
+
     <main>
         @yield('content')
     </main>
-    
-    <!-- Footer -->
-    <footer class="footer text-white mt-5 py-5">
+
+    <footer class="footer">
         <div class="container">
             <div class="row">
-                <!-- Company Info -->
-                <div class="col-lg-4 mb-4 mb-lg-0">
-                    <div class="mb-3">
-                        <h3 class="footer-logo">
-                            <i class="fas fa-tablets text-teal-400 me-2"></i>
-                            Pharma<span class="text-teal-400">Labs</span>
-                        </h3>
-                        <p class="text-muted mt-2">
-                            Your trusted partner in health and wellness. Providing authentic medicines and healthcare products since 2020.
-                        </p>
-                    </div>
-                    
-                    <!-- Social Links -->
-                    <div class="social-icons d-flex gap-3">
-                        <a href="#" class="social-icon">
-                            <i class="fab fa-facebook-f"></i>
-                        </a>
-                        <a href="#" class="social-icon">
-                            <i class="fab fa-twitter"></i>
-                        </a>
-                        <a href="#" class="social-icon">
-                            <i class="fab fa-instagram"></i>
-                        </a>
-                        <a href="#" class="social-icon">
-                            <i class="fab fa-linkedin-in"></i>
-                        </a>
-                        <a href="#" class="social-icon">
-                            <i class="fab fa-youtube"></i>
-                        </a>
+                <div class="col-lg-4 mb-4">
+                    <img src="{{ asset('images/mediquick-logo.png') }}" class="footer-logo" alt="MediQuick">
+                    <p class="footer-text">India's trusted healthcare platform for medicines, healthcare products and online doctor consultations.</p>
+                </div>
+                <div class="col-lg-2 col-md-4 mb-4">
+                    <h5 class="footer-title">Company</h5>
+                    <div class="footer-links">
+                        <a href="#">About Us</a>
+                        <a href="#">Contact Us</a>
+                        <a href="#">Careers</a>
                     </div>
                 </div>
-                
-                <!-- Quick Links -->
-                <div class="col-lg-2 col-md-4 mb-4 mb-md-0">
-                    <h6 class="fw-bold mb-3">Quick Links</h6>
-                    <ul class="list-unstyled">
-                        <li class="mb-2"><a href="#" class="footer-link"><i class="fas fa-chevron-right me-2 fa-xs"></i>About Us</a></li>
-                        <li class="mb-2"><a href="#" class="footer-link"><i class="fas fa-chevron-right me-2 fa-xs"></i>Contact Us</a></li>
-                        <li class="mb-2"><a href="#" class="footer-link"><i class="fas fa-chevron-right me-2 fa-xs"></i>FAQs</a></li>
-                        <li class="mb-2"><a href="#" class="footer-link"><i class="fas fa-chevron-right me-2 fa-xs"></i>Privacy Policy</a></li>
-                        <li class="mb-2"><a href="#" class="footer-link"><i class="fas fa-chevron-right me-2 fa-xs"></i>Terms & Conditions</a></li>
-                    </ul>
-                </div>
-                
-                <!-- Categories -->
-                <div class="col-lg-2 col-md-4 mb-4 mb-md-0">
-                    <h6 class="fw-bold mb-3">Categories</h6>
-                    <ul class="list-unstyled">
-                        <li class="mb-2"><a href="#" class="footer-link"><i class="fas fa-chevron-right me-2 fa-xs"></i>Medicines</a></li>
-                        <li class="mb-2"><a href="#" class="footer-link"><i class="fas fa-chevron-right me-2 fa-xs"></i>Personal Care</a></li>
-                        <li class="mb-2"><a href="#" class="footer-link"><i class="fas fa-chevron-right me-2 fa-xs"></i>Health Devices</a></li>
-                        <li class="mb-2"><a href="#" class="footer-link"><i class="fas fa-chevron-right me-2 fa-xs"></i>Wellness</a></li>
-                        <li class="mb-2"><a href="#" class="footer-link"><i class="fas fa-chevron-right me-2 fa-xs"></i>Ayurveda</a></li>
-                    </ul>
-                </div>
-                
-                <!-- Contact Info -->
-                <div class="col-lg-4 col-md-4">
-                    <h6 class="fw-bold mb-3">Contact Information</h6>
-                    <div class="contact-item">
-                        <div class="contact-icon">
-                            <i class="fas fa-map-marker-alt"></i>
-                        </div>
-                        <div>
-                            123 Health Street, Andheri East<br>
-                            Mumbai, Maharashtra - 400069
-                        </div>
+                <div class="col-lg-2 col-md-4 mb-4">
+                    <h5 class="footer-title">Categories</h5>
+                    <div class="footer-links">
+                        <a href="#">Medicines</a>
+                        <a href="#">Healthcare</a>
+                        <a href="#">Wellness</a>
                     </div>
-                    <div class="contact-item">
-                        <div class="contact-icon">
-                            <i class="fas fa-phone-alt"></i>
-                        </div>
-                        <div>+91 98765 43210</div>
-                    </div>
-                    <div class="contact-item">
-                        <div class="contact-icon">
-                            <i class="fas fa-envelope"></i>
-                        </div>
-                        <div>support@medilife.com</div>
+                </div>
+                <div class="col-lg-4">
+                    <h5 class="footer-title">Support</h5>
+                    <div class="footer-links">
+                        <a href="#">support@rapidretail.com</a>
+                        <a href="#">+91 9876543210</a>
+                        <a href="#">Ahmedabad, Gujarat</a>
                     </div>
                 </div>
             </div>
-            
-            <!-- Newsletter Section -->
-            <div class="row mt-4 pt-3">
-                <div class="col-lg-8 mx-auto text-center">
-                    <h6 class="fw-bold mb-3">Subscribe to our Newsletter</h6>
-                    <p class="text-muted small mb-3">Get health tips, offers & updates directly in your inbox</p>
-                    <div class="input-group mb-3" style="max-width: 500px; margin: 0 auto;">
-                        <input type="email" class="form-control newsletter-input" placeholder="Enter your email address">
-                        <button class="btn btn-newsletter" type="button">
-                            Subscribe <i class="fas fa-paper-plane ms-2"></i>
-                        </button>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Payment Methods & Copyright -->
-            <div class="footer-bottom mt-4 pt-3">
-                <div class="row align-items-center">
-                    <div class="col-md-6 text-center text-md-start mb-3 mb-md-0">
-                        <div class="payment-icons d-flex gap-3 justify-content-center justify-content-md-start">
-                            <i class="fab fa-cc-visa"></i>
-                            <i class="fab fa-cc-mastercard"></i>
-                            <i class="fab fa-cc-amex"></i>
-                            <i class="fab fa-cc-paypal"></i>
-                            <i class="fab fa-google-pay"></i>
-                            <i class="fab fa-apple-pay"></i>
-                            <i class="fas fa-lock"></i>
-                        </div>
-                    </div>
-                    <div class="col-md-6 text-center text-md-end">
-                        <small class="text-muted">
-                            &copy; 2024 MediLife Pharmacy. All rights reserved. | 
-                            <a href="#" class="text-muted text-decoration-none">Sitemap</a>
-                        </small>
-                    </div>
-                </div>
+            <div class="footer-bottom">
+                © {{ date('Y') }} Rapid Retail Pharmacy. All Rights Reserved.
             </div>
         </div>
     </footer>
-    
-    <!-- Scroll to Top Button -->
-    <div class="scroll-top" id="scrollTop">
-        <i class="fas fa-arrow-up"></i>
-    </div>
-    
-    <!-- Bootstrap JS -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    
-    <script>
-        // Auto-hide alerts after 5 seconds
-        setTimeout(() => {
-            document.querySelectorAll('.alert-fixed').forEach(alert => {
-                alert.style.display = 'none';
-            });
-        }, 5000);
 
-        function addToCart(itemId) {
-    fetch('/add-to-cart', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
-        },
-        body: JSON.stringify({
-            item_id: itemId,
-            qty: 1
-        })
-    })
-    .then(res => res.json())
-    .then(data => {
-        // 🔥 badge update
-        let badge = document.getElementById('cart-count');
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+   <script>
 
-        if (badge) {
-let count = parseInt(data.cart_count) || 0;
+document
+.getElementById(
+    'logoutBtn'
+)
+?.addEventListener(
+    'click',
+    async function () {
 
-if (count > 0) {
-    badge.style.display = "flex";
-    badge.innerText = count;
-} else {
-    badge.style.display = "none";
-    badge.innerText = "";
-}     } else {
-            // agar pehle badge nahi tha
-            let cartIcon = document.querySelector('.nav-item.position-relative');
-            cartIcon.insertAdjacentHTML('beforeend',
-                `<span class="cart-badge" id="cart-count">${data.cart_count}</span>`
-            );
-        }
-    });
-}
-        
-        // Scroll to Top functionality
-        const scrollTop = document.getElementById('scrollTop');
-        
-        window.addEventListener('scroll', () => {
-            if (window.scrollY > 300) {
-                scrollTop.classList.add('show');
+        try {
+
+            const response =
+                await fetch(
+                    '{{ route("logout") }}',
+                    {
+                        method: 'POST',
+
+                        headers: {
+
+                            'Accept':
+                                'application/json',
+
+                            'Content-Type':
+                                'application/json',
+
+                            'Authorization':
+                                'Bearer ' +
+                                localStorage.getItem(
+                                    'auth_token'
+                                ),
+
+                            'X-CSRF-TOKEN':
+                                document.querySelector(
+                                    'meta[name="csrf-token"]'
+                                ).getAttribute(
+                                    'content'
+                                ),
+
+                            'X-Device-ID':
+                                localStorage.getItem(
+                                    'device_id'
+                                )
+                        }
+                    }
+                );
+
+            const data =
+                await response.json();
+
+            if (data.success) {
+
+                /*
+                |--------------------------------------------------------------------------
+                | REMOVE ONLY AUTH
+                |--------------------------------------------------------------------------
+                */
+
+                localStorage.removeItem(
+                    'auth_token'
+                );
+
+                localStorage.removeItem(
+                    'user_data'
+                );
+
+                /*
+                |--------------------------------------------------------------------------
+                | DO NOT REMOVE DEVICE ID
+                |--------------------------------------------------------------------------
+                */
+
+                // localStorage.removeItem('device_id');
+
+                Swal.fire({
+
+                    icon: 'success',
+
+                    title: 'Logged Out',
+
+                    text:
+                        'You have been logged out successfully',
+
+                    confirmButtonColor:
+                        '#ff6f61'
+
+                }).then(() => {
+
+                    window.location.href =
+                        '/login';
+                });
+
             } else {
-                scrollTop.classList.remove('show');
+
+                Swal.fire({
+
+                    icon: 'error',
+
+                    title: 'Logout Failed',
+
+                    text:
+                        data.message ||
+                        'Something went wrong',
+
+                    confirmButtonColor:
+                        '#ff6f61'
+                });
             }
-        });
-        
-        scrollTop.addEventListener('click', () => {
-            window.scrollTo({
-                top: 0,
-                behavior: 'smooth'
-            });
-        });
-        
-        // Newsletter subscription
-        const newsletterBtn = document.querySelector('.btn-newsletter');
-        if (newsletterBtn) {
-            newsletterBtn.addEventListener('click', function() {
-                const emailInput = document.querySelector('.newsletter-input');
-                const email = emailInput.value;
-                
-                if (email && email.includes('@')) {
-                    showToast('Subscribed successfully! Check your inbox.', 'success');
-                    emailInput.value = '';
-                } else {
-                    showToast('Please enter a valid email address', 'error');
-                }
+
+        } catch (error) {
+
+            console.error(
+                'Logout Error:',
+                error
+            );
+
+            Swal.fire({
+
+                icon: 'error',
+
+                title: 'Error',
+
+                text:
+                    'Logout failed',
+
+                confirmButtonColor:
+                    '#ff6f61'
             });
         }
-        
-        // Toast function for newsletter
-        function showToast(message, type) {
-            const toast = document.createElement('div');
-            toast.className = `alert alert-${type === 'success' ? 'success' : 'danger'} alert-dismissible fade show position-fixed`;
-            toast.style.bottom = '20px';
-            toast.style.right = '20px';
-            toast.style.zIndex = '9999';
-            toast.style.minWidth = '280px';
-            toast.style.animation = 'slideInRight 0.3s ease';
-            toast.innerHTML = `
-                <i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-circle'} me-2"></i>
-                ${message}
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-            `;
-            document.body.appendChild(toast);
-            setTimeout(() => {
-                toast.style.opacity = '0';
-                setTimeout(() => toast.remove(), 300);
-            }, 3000);
-        }
-    </script>
-    <script>
-document.addEventListener("DOMContentLoaded", function () {
+    }
+);
 
-    fetch("{{ env('API_BASE_URL') }}/cart", {
-        headers: {
-            "Authorization": "Bearer {{ session('user_token') }}"
-        }
-    })
-    .then(res => res.json())
-    .then(data => {
-       let count = data.items?.reduce((sum, i) => sum + i.qty, 0) || 0;
-
-let el = document.getElementById("cart-count");
-
-if (count > 0) {
-    el.style.display = "flex"; // because badge flex me hai
-    el.innerText = count;
-} else {
-    el.style.display = "none";
-}
-    })
-    .catch(() => {
-let el = document.getElementById("cart-count");
-el.style.display = "none";    });
-
-});
 </script>
-    
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
     @stack('scripts')
 </body>
 </html>
