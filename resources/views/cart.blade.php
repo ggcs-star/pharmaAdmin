@@ -17,8 +17,8 @@
 @section('title', 'My Cart')
 
 @section('content')
-<div class="container py-4 py-md-5">
-
+<div class="container-fluid px-lg-5 px-3 py-3 bg-light min-vh-100">
+    
     <h1 class="fw-bold mb-4 d-flex align-items-center gap-2">
         <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-primary"><circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/></svg>
         Shopping Cart
@@ -58,8 +58,10 @@
                             </thead>
                             <tbody id="cart-items-body">
                                 @foreach($cart['items'] as $item)
-                                <tr class="item-row cart-item-row" data-id="{{ $item['id'] }}" data-price="{{ $item['price'] }}">
-                                    {{-- Product with Image --}}
+<tr class="item-row cart-item-row"
+    data-id="{{ $item['id'] }}"
+    data-price="{{ $item['online_price'] ?? $item['price'] }}">
+                                        {{-- Product with Image --}}
                                     <td class="ps-4">
                                         <div class="d-flex align-items-center gap-3">
 
@@ -110,7 +112,7 @@ if (!empty($item['main_image'])) {
 
                                     {{-- Price --}}
                                     <td class="text-success fw-semibold item-price" data-id="{{ $item['id'] }}">
-                                        ₹{{ number_format($item['price'], 2) }}
+                                       ₹{{ number_format($item['online_price'] ?? $item['price'], 2) }}
                                     </td>
 
                                     {{-- Quantity with Flipkart Style Controls --}}
@@ -124,7 +126,7 @@ if (!empty($item['main_image'])) {
 
                                     {{-- Total --}}
                                     <td class="fw-bold text-dark item-total" data-id="{{ $item['id'] }}">
-                                        ₹{{ number_format($item['total_price'], 2) }}
+                                     ₹{{ number_format(($item['online_price'] ?? $item['price']) * $item['qty'], 2) }}
                                     </td>
 
                                     {{-- Remove --}}
@@ -174,7 +176,10 @@ if (!empty($item['main_image'])) {
                 
                 <div class="d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom">
                     <span class="text-muted">Subtotal</span>
-                    <strong id="summary-subtotal" class="text-success fs-5">₹{{ number_format($cart['summary']['total'], 2) }}</strong>
+                    <strong id="summary-subtotal" class="text-success fs-5">₹{{ number_format(
+collect($cart['items'])->sum(function($item){
+    return ($item['online_price'] ?? $item['price']) * $item['qty'];
+}), 2) }}</strong>
                 </div>
                 
                 <div class="d-flex justify-content-between mb-3">
@@ -189,7 +194,10 @@ if (!empty($item['main_image'])) {
                 
                 <div class="d-flex justify-content-between align-items-center mb-4">
                     <span class="fw-bold fs-5">Total</span>
-                    <span id="summary-total" class="fw-bold text-success fs-3">₹{{ number_format($cart['summary']['total'], 2) }}</span>
+                    <span id="summary-total" class="fw-bold text-success fs-3">₹{{ number_format(
+collect($cart['items'])->sum(function($item){
+    return ($item['online_price'] ?? $item['price']) * $item['qty'];
+}), 2) }}</span>
                 </div>
 
                 <hr class="my-2">
@@ -309,7 +317,11 @@ if (!empty($item['main_image'])) {
     
     // Configuration
     const API_BASE = "{{ env('API_BASE_URL') }}";
-    const token = document.querySelector('meta[name="api-token"]')?.getAttribute('content');
+ const token = localStorage.getItem('auth_token');
+const deviceId = localStorage.getItem('device_id');
+
+console.log('AUTH TOKEN:', token);
+console.log('DEVICE ID:', deviceId);
     const csrf = document.querySelector('meta[name="csrf-token"]')?.content;
     const UPDATE_URL = "{{ route('cart.update') }}";
     const REMOVE_BASE_URL = "{{ url('cart/remove') }}";
@@ -623,14 +635,15 @@ try {
                 formData.append('_token', csrf);
                 
               try {
-    const response = await fetch(API_BASE + '/prescription/upload', {
-        method: 'POST',
-        headers: {
-            'Authorization': 'Bearer ' + token,
-            'Accept': 'application/json'
-        },
-        body: formData
-    });
+const response = await fetch(API_BASE + '/prescription/upload', {
+    method: 'POST',
+    headers: {
+        'Authorization': 'Bearer ' + token,
+        'X-Device-ID': deviceId,
+        'Accept': 'application/json'
+    },
+    body: formData
+});
 
     const data = await response.json();
 
@@ -668,43 +681,79 @@ try {
     // ===============================
     // LOAD ADDRESSES (KEEP EXACTLY SAME)
     // ===============================
-    function loadAddresses() {
-        const dropdown = document.getElementById("address_id");
-        if (!dropdown) return;
-    
-        fetch(API_BASE + "/addresses", {
-            headers: {
-                "Authorization": "Bearer " + token,
-                "Accept": "application/json"
-            }
-        })
-        .then(res => res.json())
-        .then(res => {
-            dropdown.innerHTML = '<option value="">Select Address</option>';
-            
-            if (!res.data || res.data.length === 0) {
-                dropdown.innerHTML = '<option value="">No Address Found</option>';
-                return;
-            }
-            
-            res.data.forEach(addr => {
-                let option = document.createElement("option");
-                option.value = addr.id;
-                option.text = addr.name + " - " + addr.city;
-                if (addr.is_default) {
-                    option.selected = true;
-                    localStorage.setItem("selected_address_id", addr.id);
-                }
-                dropdown.appendChild(option);
-            });
-            
-            let saved = localStorage.getItem("selected_address_id");
-            if (saved && document.querySelector(`option[value="${saved}"]`)) {
-                dropdown.value = saved;
-            }
-        })
-        .catch(err => console.error("Address load error:", err));
+function loadAddresses() {
+
+    const dropdown = document.getElementById("address_id");
+
+    if (!dropdown) return;
+
+  fetch(API_BASE + "/addresses", {
+    headers: {
+        "Authorization": "Bearer " + token,
+        "X-Device-ID": deviceId,
+        "Accept": "application/json"
     }
+})
+
+    .then(res => res.json())
+
+    .then(res => {
+
+        dropdown.innerHTML = '<option value="">Select Address</option>';
+
+        if (!res.data || res.data.length === 0) {
+
+            dropdown.innerHTML =
+                '<option value="">No Address Found</option>';
+
+            return;
+        }
+
+        res.data.forEach(addr => {
+
+            let option = document.createElement("option");
+
+            option.value = addr.id;
+
+            option.text =
+                addr.name + " - " + addr.city;
+
+            if (addr.is_default) {
+
+                option.selected = true;
+
+                localStorage.setItem(
+                    "selected_address_id",
+                    addr.id
+                );
+            }
+
+            dropdown.appendChild(option);
+        });
+
+        let saved =
+            localStorage.getItem("selected_address_id");
+
+        if (
+            saved &&
+            document.querySelector(
+                `option[value="${saved}"]`
+            )
+        ) {
+            dropdown.value = saved;
+        }
+
+    })
+
+    .catch(err => {
+
+        console.error("Address load error:", err);
+
+        dropdown.innerHTML =
+            '<option value="">Failed to load addresses</option>';
+
+    });
+}
     
     // Save selected address
     document.getElementById("address_id")?.addEventListener("change", function() {
@@ -769,20 +818,24 @@ try {
                     formData.append('address_id', addressId);
                     formData.append('payment_id', response.razorpay_payment_id);
                     formData.append('payment_mode', 'razorpay');
-let prescriptionId = localStorage.getItem('prescription_id');
+if (REQUIRES_PRESCRIPTION) {
 
-if (!prescriptionId || prescriptionId === "null") {
-    alert("⚠️ Please upload prescription again");
-    return;
+    let prescriptionId = localStorage.getItem('prescription_id');
+
+    if (!prescriptionId || prescriptionId === "null") {
+        alert("⚠️ Please upload prescription again");
+        return;
+    }
+
+    formData.append('prescription_id', prescriptionId);
 }
-
-formData.append('prescription_id', prescriptionId);
                     fetch(API_BASE + '/orders/place', {
     method: 'POST',
-    headers: {
-        'Authorization': 'Bearer ' + token,
-        'Accept': 'application/json'
-    },
+ headers: {
+    'Authorization': 'Bearer ' + token,
+    'X-Device-ID': deviceId,
+    'Accept': 'application/json'
+},
     body: formData
 })
                     .then(res => res.json())
@@ -807,10 +860,20 @@ formData.append('prescription_id', prescriptionId);
                             alert("❌ Order failed: " + data.message);
                         }
                     })
-                    .catch(err => {
-                        console.error(err);
-                        alert("Server error while placing order");
-                    });
+                 .catch(async err => {
+
+    console.error("ORDER ERROR:", err);
+
+    try {
+
+        const text = await err.text();
+        console.log(text);
+
+    } catch(e) {}
+
+    alert("Check console for real error");
+
+});
                 },
                 modal: {
                     ondismiss: function() {

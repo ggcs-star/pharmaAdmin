@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 
 class BaseController extends Controller
 {
@@ -13,31 +14,143 @@ class BaseController extends Controller
         $this->apiBaseUrl = config('api.base_url');
     }
 
-    protected function apiGet($endpoint)
+    /*
+    |--------------------------------------------------------------------------
+    | DEFAULT HEADERS
+    |--------------------------------------------------------------------------
+    */
+
+    protected function getDefaultHeaders()
     {
-        return Http::withToken(session('user_token'))
-            ->timeout(15)
-            ->get($this->apiBaseUrl . $endpoint);
+        return [
+            'Accept' => 'application/json',
+            'X-Device-ID' => session('device_id')
+        ];
     }
 
-    protected function apiPost($endpoint, $data = [])
-    {
-        return Http::withToken(session('user_token'))
+    /*
+    |--------------------------------------------------------------------------
+    | GET
+    |--------------------------------------------------------------------------
+    */
+
+    protected function apiGet(
+        $endpoint,
+        $headers = []
+    ) {
+
+        return Http::withToken(
+                session('user_token')
+            )
+            ->withHeaders(
+                array_merge(
+                    $this->getDefaultHeaders(),
+                    $headers
+                )
+            )
             ->timeout(15)
-            ->post($this->apiBaseUrl . $endpoint, $data);
+            ->get(
+                $this->apiBaseUrl .
+                $endpoint
+            );
     }
 
-    protected function apiPut($endpoint, $data = [])
-    {
-        return Http::withToken(session('user_token'))
+    /*
+    |--------------------------------------------------------------------------
+    | POST
+    |--------------------------------------------------------------------------
+    */
+
+    protected function apiPost(
+        $endpoint,
+        $data = [],
+        $headers = []
+    ) {
+
+        Log::info('API POST DEBUG', [
+
+            'endpoint' => $endpoint,
+
+            'headers' => array_merge(
+                $this->getDefaultHeaders(),
+                $headers
+            ),
+
+            'payload' => $data
+        ]);
+
+        return Http::withToken(
+                session('user_token')
+            )
+            ->withHeaders(
+                array_merge(
+                    $this->getDefaultHeaders(),
+                    $headers
+                )
+            )
             ->timeout(15)
-            ->put($this->apiBaseUrl . $endpoint, $data);
+            ->post(
+                $this->apiBaseUrl .
+                $endpoint,
+
+                $data
+            );
     }
 
-    protected function apiDelete($endpoint)
-    {
-        return Http::withToken(session('user_token'))
+    /*
+    |--------------------------------------------------------------------------
+    | PUT
+    |--------------------------------------------------------------------------
+    */
+
+    protected function apiPut(
+        $endpoint,
+        $data = [],
+        $headers = []
+    ) {
+
+        return Http::withToken(
+                session('user_token')
+            )
+            ->withHeaders(
+                array_merge(
+                    $this->getDefaultHeaders(),
+                    $headers
+                )
+            )
             ->timeout(15)
-            ->delete($this->apiBaseUrl . $endpoint);
+            ->put(
+                $this->apiBaseUrl .
+                $endpoint,
+
+                $data
+            );
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | DELETE
+    |--------------------------------------------------------------------------
+    */
+
+    protected function apiDelete(
+        $endpoint,
+        $headers = []
+    ) {
+
+        return Http::withToken(
+                session('user_token')
+            )
+            ->withHeaders(
+                array_merge(
+                    $this->getDefaultHeaders(),
+                    $headers
+                )
+            )
+            ->timeout(15)
+            ->delete(
+                $this->apiBaseUrl .
+                $endpoint
+            );
     }
 }
